@@ -1,4 +1,8 @@
-﻿const BAYAN_NEWS = [
+﻿/* Hardcoded sample articles used as a last-resort fallback when the live
+ * news feeds in js/api.js (rss2json + GDELT + AllOrigins) are unreachable.
+ * Real news in production comes from BayanAPI.news() — see js/api.js.
+ */
+const BAYAN_NEWS_FALLBACK = [
   {
     id: "n1",
     title: "Senate panel resumes probe on flood control projects amid budget scrutiny",
@@ -153,5 +157,9 @@
     viewCount: 2900,
   },
 ];
+
+/* Backwards-compatible alias — older calls to BAYAN_NEWS still work
+ * but everything new should use the live BayanAPI.news() feed. */
+const BAYAN_NEWS = BAYAN_NEWS_FALLBACK;
 
 /* BAYAN_CANDIDATES is built in candidates-from-roster.js (24 senators + House leadership). */

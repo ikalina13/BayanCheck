@@ -306,18 +306,40 @@ function initLayout(active) {
   initThemeToggle();
 }
 
+function articleHref(a) {
+  if (a.sourceUrl && /^https?:\/\//.test(a.sourceUrl)) {
+    return "article.html?url=" + encodeURIComponent(a.sourceUrl);
+  }
+  return "article.html?id=" + encodeURIComponent(a.id);
+}
+
+function newsCardImg(a) {
+  if (a.imageUrl) {
+    return `<a href="${articleHref(a)}"><img src="${escAttr(a.imageUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`;
+  }
+  // Soft placeholder so the card is consistent
+  const ini = escAttr(initialsFromName(a.source || a.title || "?"));
+  return `<a href="${articleHref(a)}" class="news-card-thumb-fallback" aria-hidden="true"
+    style="display:block;width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--surface),var(--surface-2));display:flex;align-items:center;justify-content:center;color:var(--muted-strong);font-weight:700;font-size:1.2rem">
+    ${ini}
+  </a>`;
+}
+
 function newsCard(a, featured) {
   const breaking = a.isBreaking ? '<span class="badge-breaking">Breaking</span>' : "";
+  const cat = CATEGORIES[a.category] || a.category || "News";
+  const dateStr = formatDate(a.publishedAt);
+  const rel = (window.BayanAPI && BayanAPI.relativeTime) ? BayanAPI.relativeTime(a.publishedAt) : "";
   return `
   <article class="news-card reveal">
     <div class="news-card-thumb">
       ${breaking}
-      <a href="article.html?id=${a.id}"><img src="${a.imageUrl}" alt="" loading="lazy"></a>
+      ${newsCardImg(a)}
     </div>
     <div class="news-card-body">
-      <p class="meta"><span class="cat">${CATEGORIES[a.category] || a.category}</span> · ${a.source} · ${formatDate(a.publishedAt)}</p>
-      <h3><a href="article.html?id=${a.id}">${a.title}</a></h3>
-      <p class="news-card-summary">${a.summary}</p>
+      <p class="meta"><span class="cat">${cat}</span> · ${escAttr(a.source || "")}${rel ? " · " + rel : (dateStr ? " · " + dateStr : "")}</p>
+      <h3><a href="${articleHref(a)}">${a.title}</a></h3>
+      <p class="news-card-summary">${a.summary || ""}</p>
     </div>
   </article>`;
 }
@@ -344,69 +366,227 @@ function candidateCard(c) {
 
 function sourceLinks(sources) {
   if (!sources || !sources.length) return "";
-  return `<ul class="source-list">${sources.map((s) => `<li><a href="${s.url}" target="_blank" rel="noopener">${s.label}</a> <span class="meta">(${s.accessedAt})</span></li>`).join("")}</ul>`;
+  return `<ul class="source-list" style="list-style:none;padding:.5rem .75rem"><li><span class="source-list-label">Sources</span></li>${sources.map((s) => `<li><a href="${escAttr(s.url)}" target="_blank" rel="noopener">${escAttr(s.label || s.url)}</a>${s.accessedAt ? ` <span class="meta">(${s.accessedAt})</span>` : ""}</li>`).join("")}</ul>`;
+}
+
+function hearingRow(h) {
+  let dateLabel = h.rawDate || h.date;
+  try {
+    const d = new Date(h.date);
+    if (!isNaN(d.getTime())) {
+      dateLabel = d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+    }
+  } catch (e) {}
+  return `<li class="hearing-row">
+    <div>
+      <div class="hearing-date">${dateLabel}${h.time ? "<br><span class=\"hearing-meta\">" + escAttr(h.time) + "</span>" : ""}</div>
+    </div>
+    <div>
+      <div class="hearing-title">${escAttr(h.committee || "Senate hearing")}</div>
+      ${h.agenda ? `<div class="hearing-meta">${escAttr(h.agenda)}</div>` : ""}
+      <div class="hearing-meta"><a href="${escAttr(h.sourceUrl || "https://web.senate.gov.ph/committee/calendar.asp")}" target="_blank" rel="noopener">View on senate.gov.ph →</a></div>
+    </div>
+  </li>`;
+}
+
+function platformCard(item, kind) {
+  const cls = kind === "youtube" ? "platform-card--youtube" : kind === "reddit" ? "platform-card--reddit" : "platform-card--news";
+  const tag = kind === "youtube" ? "YouTube" : kind === "reddit" ? "Reddit" : (item.source || "News");
+  const sub = kind === "youtube" ? (item.channel || "") : kind === "reddit" ? `${item.subreddit || "r/Philippines"} · ${item.score || 0} pts` : (item.source || "");
+  const dateRel = item.publishedAt && window.BayanAPI ? BayanAPI.relativeTime(item.publishedAt) : "";
+  return `<li><a class="platform-card ${cls}" href="${escAttr(item.url)}" target="_blank" rel="noopener">
+    <span class="platform-tag">${escAttr(tag)}</span>
+    <div class="platform-title">${escAttr(item.title || "")}</div>
+    <div class="platform-sub">${escAttr(sub)}${dateRel ? " · " + dateRel : ""}</div>
+  </a></li>`;
 }
 
 const initPage = {
   home() {
     initLayout("home");
-    const breaking = BAYAN_NEWS.filter((a) => a.isBreaking);
-    const hero = breaking[0] || BAYAN_NEWS[0];
-    const trending = [...BAYAN_NEWS].sort((a, b) => b.viewCount - a.viewCount).slice(0, 5);
-    $("#hero-news").innerHTML = newsCard(hero);
-    $("#top-stories").innerHTML = BAYAN_NEWS.slice(1, 5).map((a) => newsCard(a)).join("");
-    $("#trending").innerHTML = trending
-      .map(
-        (a, i) => `
-      <div class="trending-item reveal">
-        <span class="trending-num">${i + 1}</span>
-        <div><a href="article.html?id=${a.id}">${a.title}</a><p class="meta">${a.viewCount.toLocaleString()} views</p></div>
-      </div>`
-      )
-      .join("");
+
+    // Render fallback content immediately so the page is never blank.
+    function renderArticles(list, status) {
+      const breaking = list.filter((a) => a.isBreaking);
+      const hero = breaking[0] || list[0];
+      if (hero) {
+        $("#hero-news").innerHTML = newsCard(hero) + (status ? statusPill(status) : "");
+      }
+      const top = list.filter((a) => a !== hero).slice(0, 4);
+      $("#top-stories").innerHTML = top.map((a) => newsCard(a)).join("");
+      const trending = list.slice(0, 5);
+      $("#trending").innerHTML = trending
+        .map(
+          (a, i) => `
+        <div class="trending-item reveal">
+          <span class="trending-num">${i + 1}</span>
+          <div>
+            <a href="${articleHref(a)}">${a.title}</a>
+            <p class="meta">${escAttr(a.source || "")}${a.publishedAt ? " · " + (BayanAPI && BayanAPI.relativeTime ? BayanAPI.relativeTime(a.publishedAt) : "") : ""}</p>
+          </div>
+        </div>`
+        )
+        .join("");
+      initRevealAnimations();
+    }
+
+    function statusPill(s) {
+      if (!s) return "";
+      const cls = s.degraded ? "is-degraded" : s.offline ? "is-offline" : "";
+      return `<p class="live-pill ${cls}" style="margin-top:.75rem">${s.text}</p>`;
+    }
+
+    renderArticles(BAYAN_NEWS_FALLBACK || []);
+
     const featured =
       typeof BAYAN_CANDIDATES !== "undefined"
         ? BAYAN_CANDIDATES.filter((c) =>
             ["kiko-pangilinan", "robin-padilla", "risa-hontiveros", "chiz-escudero"].includes(c.slug)
           )
         : [];
-    $("#featured-candidates").innerHTML = (featured.length ? featured : BAYAN_CANDIDATES.slice(0, 4))
+    $("#featured-candidates").innerHTML = (featured.length ? featured : (BAYAN_CANDIDATES || []).slice(0, 4))
       .map(candidateCard)
       .join("");
-    initRevealAnimations();
+
+    // "This Week in the Senate" sidebar block (non-blocking)
+    if (window.BayanAPI && BayanAPI.hearings) {
+      BayanAPI.hearings({ limit: 5 }).then((res) => {
+        const sidebar = $("#trending")?.parentElement?.parentElement;
+        if (!res || !res.ok || !res.data || !res.data.length) return;
+        const html = `
+          <div class="sidebar-box" style="margin-top:1.5rem">
+            <h3>This Week in the Senate</h3>
+            <ul class="hearings-list">
+              ${res.data.slice(0, 5).map(hearingRow).join("")}
+            </ul>
+            <p class="meta" style="margin-top:.5rem">Source: <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">senate.gov.ph</a> · ${BayanAPI.relativeTime(new Date().toISOString())}</p>
+          </div>`;
+        sidebar?.insertAdjacentHTML("beforeend", html);
+      }).catch(() => {});
+    }
+
+    // Live news (rss2json + GDELT). Replaces fallback when feeds reachable.
+    if (window.BayanAPI && BayanAPI.news) {
+      BayanAPI.news({ limit: 30 }).then((res) => {
+        if (res && res.ok && res.data && Array.isArray(res.data.items) && res.data.items.length) {
+          const status = res.degraded
+            ? { text: "Showing cached headlines (some live feeds unreachable)", degraded: true }
+            : { text: `Live: ${res.data.items.length} stories from ${res.data.sources.ok}/${res.data.sources.total} PH outlets · updated ${BayanAPI.relativeTime(res.data.lastUpdated)}` };
+          renderArticles(res.data.items, status);
+        } else {
+          renderArticles(BAYAN_NEWS_FALLBACK || [], { text: "Live feeds unreachable — showing sample articles", offline: true });
+        }
+      }).catch(() => {
+        renderArticles(BAYAN_NEWS_FALLBACK || [], { text: "Live feeds unreachable — showing sample articles", offline: true });
+      });
+    }
   },
 
   news() {
     initLayout("news");
     const cat = getParam("category");
     const q = (getParam("q") || "").toLowerCase();
-    let list = [...BAYAN_NEWS];
-    if (cat) list = list.filter((a) => a.category === cat);
-    if (q) list = list.filter((a) => a.title.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q));
-    list.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-    $("#news-grid").innerHTML = list.length ? list.map((a) => newsCard(a)).join("") : '<p class="empty">No articles found.</p>';
-    if (cat) $("#filter-label").textContent = "Showing: " + (CATEGORIES[cat] || cat);
-    initRevealAnimations();
+    const grid = $("#news-grid");
+    const labelEl = $("#filter-label");
+
+    function render(list, statusHtml) {
+      let f = [...list];
+      if (cat) f = f.filter((a) => a.category === cat);
+      if (q) f = f.filter((a) => (a.title || "").toLowerCase().includes(q) || (a.summary || "").toLowerCase().includes(q));
+      f.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+      grid.innerHTML = f.length
+        ? f.map((a) => newsCard(a)).join("")
+        : '<p class="empty">No Philippine politics articles found in the live feeds for this filter. Try removing the filter or refresh in a few minutes.</p>';
+      if (labelEl) {
+        labelEl.innerHTML = (cat ? `<strong>Filter:</strong> ${CATEGORIES[cat] || cat}` : "") + (statusHtml || "");
+      }
+      initRevealAnimations();
+    }
+
+    // Show fallback first, then refresh from live API
+    render(BAYAN_NEWS_FALLBACK || [], ' <span class="live-pill is-degraded" style="margin-left:.5rem">Loading live feeds…</span>');
+
+    if (window.BayanAPI && BayanAPI.news) {
+      BayanAPI.news({ category: cat || null, q: q || null, limit: 80 }).then((res) => {
+        if (res && res.ok && res.data && res.data.items && res.data.items.length) {
+          const status = ` <span class="live-pill ${res.degraded ? "is-degraded" : ""}" style="margin-left:.5rem">${res.degraded ? "Some feeds unreachable · " : "Live · "}${res.data.items.length} stories from ${res.data.sources.ok}/${res.data.sources.total} PH outlets · ${BayanAPI.relativeTime(res.data.lastUpdated)}</span>`;
+          render(res.data.items, status);
+        } else {
+          render(BAYAN_NEWS_FALLBACK || [], ' <span class="live-pill is-offline" style="margin-left:.5rem">Live feeds unreachable — showing sample articles</span>');
+        }
+      }).catch(() => {
+        render(BAYAN_NEWS_FALLBACK || [], ' <span class="live-pill is-offline" style="margin-left:.5rem">Live feeds unreachable — showing sample articles</span>');
+      });
+    }
   },
 
   article() {
     initLayout("news");
+    const root = $("#article-root");
     const id = getParam("id");
-    const a = BAYAN_NEWS.find((x) => x.id === id);
-    if (!a) {
-      $("#article-root").innerHTML = '<p class="empty">Article not found. <a href="news.html">Back to news</a></p>';
+    const url = getParam("url");
+
+    function renderArticle(a) {
+      const sourceLine = `<strong>${escAttr(a.source || "")}</strong> · ${a.publishedAt ? formatDate(a.publishedAt) : ""} · <a href="${escAttr(a.sourceUrl || "#")}" target="_blank" rel="noopener">View original</a>`;
+      const sourceBlock = `
+        <div class="source-list" style="margin-top:1.5rem">
+          <span class="source-list-label">Source for this story</span>
+          <ul style="list-style:none;padding:0;margin:0">
+            <li><a href="${escAttr(a.sourceUrl || "#")}" target="_blank" rel="noopener">${escAttr(a.source || a.sourceUrl)}</a> · published ${a.publishedAt ? formatDate(a.publishedAt) : "date unknown"}</li>
+          </ul>
+        </div>`;
+      root.innerHTML = `
+        <p class="meta"><a href="news.html">News</a> / ${CATEGORIES[a.category] || a.category || "Philippine politics"}</p>
+        ${a.isBreaking ? '<span class="badge-breaking" style="position:static;display:inline-block;margin:.5rem 0">Breaking</span>' : ""}
+        <h1 style="font-size:2rem;margin:1rem 0">${a.title}</h1>
+        <p class="meta">${sourceLine}</p>
+        ${a.imageUrl ? `<img class="article-img reveal" src="${escAttr(a.imageUrl)}" referrerpolicy="no-referrer" alt="">` : ""}
+        <p style="font-size:1.1rem;font-weight:500;margin:1rem 0">${a.summary || ""}</p>
+        ${a.content && a.content !== a.summary ? `<p>${a.content}</p>` : ""}
+        <p style="margin-top:2rem">
+          <a href="${escAttr(a.sourceUrl || "#")}" class="btn btn-primary" target="_blank" rel="noopener">Read full article on ${escAttr(a.source || "source")} →</a>
+        </p>
+        <p class="meta" style="margin-top:1rem;font-size:.78rem;color:var(--muted)">
+          BayanCheck does not republish full articles. We aggregate the headline and summary from the outlet's public RSS feed, and link to the original. Verify all claims at the source.
+        </p>
+        ${sourceBlock}`;
+      initRevealAnimations($("#article-root") || document);
+    }
+
+    // Live mode: arrived from a live news card → fetch from BayanAPI cache
+    if (url) {
+      // Try to find the article in the cached live news list
+      if (window.BayanAPI && BayanAPI.news) {
+        BayanAPI.news({ limit: 100 }).then((res) => {
+          const items = (res && res.data && res.data.items) || [];
+          const found = items.find((x) => x.sourceUrl === url);
+          if (found) {
+            renderArticle(found);
+          } else {
+            // We don't have the article in cache; render a stub that links out
+            renderArticle({
+              title: "Open this article on its original source",
+              source: (() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return "source"; } })(),
+              sourceUrl: url,
+              category: "politics",
+              summary: "BayanCheck couldn't load this article from the local cache. Click the button below to read it on the original source.",
+              imageUrl: "",
+            });
+          }
+        });
+      } else {
+        renderArticle({ title: url, source: url, sourceUrl: url, summary: "", imageUrl: "" });
+      }
       return;
     }
-    $("#article-root").innerHTML = `
-      <p class="meta"><a href="news.html">News</a> / ${CATEGORIES[a.category] || a.category}</p>
-      ${a.isBreaking ? '<span class="badge-breaking" style="position:static;display:inline-block;margin:.5rem 0">Breaking</span>' : ""}
-      <h1 style="font-size:2rem;margin:1rem 0">${a.title}</h1>
-      <p class="meta"><strong>${a.source}</strong> · ${formatDate(a.publishedAt)}</p>
-      <img class="article-img reveal" src="${a.imageUrl}" alt="">
-      <p style="font-size:1.1rem;font-weight:500;margin:1rem 0">${a.summary}</p>
-      <p>${a.content}</p>
-      <p style="margin-top:2rem"><a href="${a.sourceUrl}" class="btn btn-primary" target="_blank" rel="noopener">Read on ${a.source} →</a></p>`;
-    initRevealAnimations($("#article-root") || document);
+
+    // Legacy fallback: id-based lookup in the static fallback array
+    const a = (typeof BAYAN_NEWS_FALLBACK !== "undefined" ? BAYAN_NEWS_FALLBACK : []).find((x) => x.id === id);
+    if (!a) {
+      root.innerHTML = '<p class="empty">Article not found. <a href="news.html">Back to news</a></p>';
+      return;
+    }
+    renderArticle(a);
   },
 
   candidates() {
@@ -472,33 +652,163 @@ const initPage = {
             ${c.region ? '<span class="dot" aria-hidden="true"></span><span>' + c.region + '</span>' : ''}
             <span class="severity ${c.issueSeverity} severity--lg">${issueSeverityLabel(c.issueSeverity)}</span>
           </div>
-          <p class="profile-summary">${c.summary}</p>
+          <p class="profile-summary" id="profile-summary">${c.summary}</p>
           <p class="profile-verified">Last verified: ${c.lastVerified}</p>
           ${wikiLink}
         </div>
       </div>
       <div class="container">
         <section class="profile-section"><h2>Basic Information</h2>
-          <p><strong>Age:</strong> ${ageLine}</p>
-          ${termLine}
-          <p><strong>Years in public service:</strong> ${yearsLine}</p>
-          <p><strong>Education:</strong> ${eduLine}</p>
+          <div id="profile-bio">
+            <p><strong>Age:</strong> ${ageLine}</p>
+            ${termLine}
+            <p><strong>Years in public service:</strong> ${yearsLine}</p>
+            <p><strong>Education:</strong> ${eduLine}</p>
+          </div>
         </section>
-        <section class="profile-section highlight"><h2>Issues & Controversies</h2>
-          <p class="meta" style="margin-bottom:1rem">All public cases listed. Allegations are marked; outcomes shown when available.</p>
-          ${casesHtml(serious, "Serious Issues", "🔴")}
-          ${casesHtml(pending, "Pending", "🟡")}
-          ${!c.cases.length ? noCasesMsg : ""}
+
+        <section class="profile-section">
+          <h2>Upcoming Senate Hearings</h2>
+          <div id="profile-hearings">
+            <p class="empty-soft">Loading from senate.gov.ph…</p>
+          </div>
         </section>
+
+        <section class="profile-section highlight"><h2>Issues & Controversies <span class="ai-badge" title="Auto-structured from public sources">AUTO</span></h2>
+          <p class="meta" style="margin-bottom:1rem">All public items listed. Allegations are marked as such; verify every item against the cited source.</p>
+          <div id="profile-issues">
+            ${casesHtml(serious, "Serious Issues", "🔴")}
+            ${casesHtml(pending, "Pending", "🟡")}
+            ${!c.cases.length ? '<p class="empty-soft">Loading from Wikipedia + Philippine news sources…</p>' : ""}
+          </div>
+        </section>
+
         <section class="profile-section"><h2>Financial Disclosure (SALN)</h2>
           ${c.saln.map((s) => `<p><strong>${s.year}:</strong> Net worth ${s.netWorth}; Income: ${s.primaryIncome}</p>${sourceLinks(s.sources)}`).join("")}
         </section>
-        <section class="profile-section"><h2>Completed Projects</h2>
-          ${c.completedProjects.map((p) => `<div class="case-item"><strong>${p.name}</strong><p>${p.description}</p>${p.impact ? "<p>" + p.impact + "</p>" : ""}${sourceLinks(p.sources)}</div>`).join("") || "<p class='meta'>None listed.</p>"}
+
+        <section class="profile-section"><h2>Bills, Projects & Career Highlights <span class="ai-badge">AUTO</span></h2>
+          <div id="profile-projects">
+            ${c.completedProjects.map((p) => `<div class="case-item"><h4>${p.name}</h4><p>${p.description}</p>${p.impact ? "<p>" + p.impact + "</p>" : ""}${sourceLinks(p.sources)}</div>`).join("") || '<p class="empty-soft">Loading from Wikipedia + Philippine news sources…</p>'}
+          </div>
         </section>
+
+        <section class="profile-section">
+          <h2>Recent Media Coverage</h2>
+          <div id="profile-coverage">
+            <p class="empty-soft">Loading recent PH news mentions…</p>
+          </div>
+        </section>
+
+        <section class="profile-section">
+          <h2>Multi-platform Mentions</h2>
+          <p class="meta" style="margin-bottom:.5rem">Aggregated from public sources beyond traditional news. Facebook is intentionally excluded — Meta forbids scraping and what those scrapers return is what the candidate's PR team chose to post (i.e. not unbiased). Add a YouTube API key in BayanBot → settings to enable the YouTube row.</p>
+          <div id="profile-platforms">
+            <p class="empty-soft">Loading…</p>
+          </div>
+        </section>
+
         <p style="margin:2rem 0"><a href="compare.html">Compare candidates</a> · <a href="candidates.html">← All candidates</a></p>
       </div>`;
     initRevealAnimations($("#profile-root") || document);
+
+    // ----- Live enrichment -----
+    if (window.BayanAPI && BayanAPI.candidateProfile) {
+      BayanAPI.candidateProfile(slug).then((res) => {
+        if (!res || !res.ok || !res.data) return;
+        const d = res.data;
+
+        // Bio: replace summary + add Wikipedia extract if our static one is the placeholder
+        if (d.biography && d.biography.summary) {
+          const sumEl = document.getElementById("profile-summary");
+          if (sumEl && /Profile summary from public election records/.test(sumEl.textContent || "")) {
+            sumEl.textContent = d.biography.summary.split(/(?<=\.)\s/).slice(0, 3).join(" ");
+          }
+        }
+
+        // Hearings
+        const hEl = document.getElementById("profile-hearings");
+        if (hEl) {
+          if (d.upcomingHearings && d.upcomingHearings.length) {
+            hEl.innerHTML = `
+              <ul class="hearings-list">${d.upcomingHearings.slice(0, 8).map(hearingRow).join("")}</ul>
+              <p class="meta" style="margin-top:.5rem">Source: <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">senate.gov.ph</a> committee calendar · live-fetched ${BayanAPI.relativeTime(d.lastFetched)}</p>`;
+          } else {
+            hEl.innerHTML = `<p class="empty-soft">No upcoming hearings on file for this senator's committees in the Senate calendar (next 30 days). <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">View full calendar →</a></p>`;
+          }
+        }
+
+        // Issues
+        const iEl = document.getElementById("profile-issues");
+        if (iEl) {
+          if (d.issues && d.issues.length) {
+            iEl.innerHTML = d.issues.map((it) => `
+              <div class="case-item">
+                <h4>${escAttr(it.title)} <span class="severity ${it.severity || "pending"}">${(it.severity || "pending") === "serious" ? "Serious" : "Public issue"}</span></h4>
+                <p>${escAttr(it.description)}</p>
+                ${sourceLinks(it.sources)}
+              </div>`).join("");
+          } else if (!c.cases.length) {
+            iEl.innerHTML = `<p class="empty-soft">No publicly documented issues found on Wikipedia or in the recent PH news net for this candidate, as of ${formatDate(d.lastFetched)}. This does not mean none exist — please continue to verify via <a href="https://en.wikipedia.org/wiki/${escAttr(d.wikiTitle)}" target="_blank" rel="noopener">Wikipedia</a> and <a href="https://www.ombudsman.gov.ph/" target="_blank" rel="noopener">Ombudsman</a>.</p>`;
+          }
+        }
+
+        // Projects
+        const pEl = document.getElementById("profile-projects");
+        if (pEl) {
+          if (d.projects && d.projects.length) {
+            pEl.innerHTML = d.projects.map((p) => `
+              <div class="case-item">
+                <h4>${escAttr(p.name)}</h4>
+                <p>${escAttr(p.description)}</p>
+                ${sourceLinks(p.sources)}
+              </div>`).join("");
+          } else if (!c.completedProjects.length) {
+            pEl.innerHTML = `<p class="empty-soft">No bills, projects, or career-highlight sections found on this candidate's Wikipedia article. Verify on the <a href="https://www.senate.gov.ph/" target="_blank" rel="noopener">Senate of the Philippines</a> bills directory.</p>`;
+          }
+        }
+
+        // Recent coverage
+        const cEl = document.getElementById("profile-coverage");
+        if (cEl) {
+          if (d.recentNews && d.recentNews.length) {
+            cEl.innerHTML = `
+              <ul class="coverage-list">
+                ${d.recentNews.slice(0, 8).map((n) => `
+                  <li>
+                    <span class="coverage-source">${escAttr(n.source || "News")}</span>
+                    <a href="${escAttr(n.sourceUrl)}" target="_blank" rel="noopener">${escAttr(n.title)}</a>
+                    <span class="coverage-date">${BayanAPI.relativeTime(n.publishedAt)}</span>
+                  </li>`).join("")}
+              </ul>
+              <p class="meta" style="margin-top:.5rem">Source: GDELT 2.0 (filtered to <code>sourcecountry:PH</code>)</p>`;
+          } else {
+            cEl.innerHTML = `<p class="empty-soft">No recent PH-news mentions surfaced via GDELT in the last fetch.</p>`;
+          }
+        }
+
+        // Multi-platform
+        const plEl = document.getElementById("profile-platforms");
+        if (plEl) {
+          const blocks = [];
+          if (d.youtube && d.youtube.length) {
+            blocks.push(`<h3 style="font-size:1rem;margin:.75rem 0 .35rem">YouTube</h3>
+              <ul class="platform-list">${d.youtube.slice(0, 6).map((y) => platformCard(y, "youtube")).join("")}</ul>`);
+          }
+          if (d.reddit && d.reddit.length) {
+            blocks.push(`<h3 style="font-size:1rem;margin:.75rem 0 .35rem">r/Philippines discussion</h3>
+              <ul class="platform-list">${d.reddit.slice(0, 6).map((r) => platformCard(r, "reddit")).join("")}</ul>`);
+          }
+          if (!blocks.length) {
+            plEl.innerHTML = `<p class="empty-soft">No off-news mentions surfaced. (Reddit search is on automatically; YouTube needs a free API key in BayanBot → settings.)</p>`;
+          } else {
+            plEl.innerHTML = blocks.join("");
+          }
+        }
+      }).catch(() => {
+        // graceful: leave initial fallback content as-is
+      });
+    }
   },
 
   compare() {
