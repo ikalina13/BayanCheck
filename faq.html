@@ -29,20 +29,6 @@
     <h2 style="margin-top:1.5rem;font-size:1.1rem">How are Senate hearing dates tracked?</h2>
     <p>The "Upcoming Senate Hearings" panel on each senator's profile is scraped live from the official Senate of the Philippines committee calendar (<a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">web.senate.gov.ph/committee/calendar.asp</a>) and matched against the senator's name. Refreshes every hour.</p>
 
-    <h2 style="margin-top:1.5rem;font-size:1.1rem">What is BayanBot?</h2>
-    <p>BayanBot is the floating chat assistant in the bottom-right corner. It's a strictly-guarded AI helper that ONLY answers questions about Philippine politics, government, and elections. It cites a source URL for every factual claim and refuses to endorse or rank candidates.</p>
-    <p><strong>It works out of the box for free</strong> — by default it uses <a href="https://pollinations.ai/" target="_blank" rel="noopener">Pollinations</a> (a free, no-key, no-signup AI service). Just click the 💬 button and start asking questions.</p>
-    <p>If you want better quality, click ⚙ Settings and switch to one of these (all also free):</p>
-    <ul style="margin:.5rem 0 .5rem 1.25rem;color:var(--muted-strong)">
-      <li><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google Gemini</a> — free key, no credit card needed.</li>
-      <li><a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq · Llama 3.1 70B</a> — free key, very fast.</li>
-      <li>Anthropic Claude or OpenAI GPT-4o — paid, optional.</li>
-    </ul>
-    <p>All API keys are stored only in your browser. <a href="about.html#privacy">More on privacy →</a></p>
-
-    <h2 style="margin-top:1.5rem;font-size:1.1rem">Is the AI 100% unbiased?</h2>
-    <p>No AI is. We mitigate by (1) hard-coding a "neutral, no endorsements, cite every claim" system prompt, (2) restricting BayanBot to facts in the loaded context (Wikipedia + PH news + Senate records), and (3) flagging if it ever cites a non-Philippine source. Always verify against the cited links.</p>
-
     <h2 style="margin-top:1.5rem;font-size:1.1rem">Why no Facebook integration?</h2>
     <p>Meta's terms of service forbid scraping, and the third-party scraper APIs that try anyway return what the candidate's PR team chose to post — which is the opposite of unbiased. If you want official Facebook page integration we'll need a Meta Developer App + Page Access Token; without that, we use Reddit + YouTube + the wider news net to surface multi-platform mentions.</p>
 
@@ -54,12 +40,9 @@
   <script src="js/roster-house.js"></script>
   <script src="js/candidates-from-roster.js"></script>
   <script src="js/data.js"></script>
-  <script src="js/config.js"></script>
   <script src="js/cors-proxy.js"></script>
   <script src="js/ph-politics-filter.js"></script>
-  <script src="js/keys.js"></script>
   <script src="js/api.js"></script>
   <script src="js/site.js"></script>
-  <script src="js/chat.js"></script>
 </body>
 </html>

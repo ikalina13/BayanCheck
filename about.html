@@ -21,15 +21,6 @@
     <h2 id="privacy" style="margin-top:2rem">Data Privacy (RA 10173)</h2>
     <p>BayanCheck is a static website hosted on GitHub Pages. We do not run a server, do not set tracking cookies, and do not collect personal data.</p>
 
-    <h3 style="margin-top:1.5rem">BayanBot &amp; your API keys</h3>
-    <p>BayanBot is the floating chat assistant in the bottom-right corner. It runs entirely in your browser. By default it uses <a href="https://pollinations.ai/" target="_blank" rel="noopener">Pollinations</a> — a free, no-key, no-signup AI service — so it works out of the box for everyone with no setup. If you want higher-quality answers, you can paste your own free key for Google Gemini or Groq (or paid keys for Anthropic Claude or OpenAI):</p>
-    <ul style="margin:.5rem 0 .5rem 1.25rem;color:var(--muted-strong)">
-      <li>Your API keys are stored only in your browser's <code>localStorage</code>.</li>
-      <li>Keys are sent only to the official API endpoint of each provider (<code>api.anthropic.com</code>, <code>api.openai.com</code>, etc.) — never to BayanCheck.</li>
-      <li>You can clear all stored keys at any time from BayanBot → ⚙ Settings → "Clear keys."</li>
-      <li>Your conversation history is stored only in <code>sessionStorage</code> (cleared when you close the tab).</li>
-    </ul>
-
     <h3 style="margin-top:1.5rem">External services we call from your browser</h3>
     <p>To deliver real-time data without a backend, the site fetches from these public APIs from your browser:</p>
     <ul style="margin:.5rem 0 .5rem 1.25rem;color:var(--muted-strong)">
@@ -42,20 +33,17 @@
     </ul>
     <p class="meta">All claims about candidates carry an inline citation back to the source. Verify everything.</p>
 
-    <h3 style="margin-top:1.5rem">AI bias disclosure</h3>
-    <p>No AI assistant is 100% unbiased. BayanBot is configured with a strict system prompt that (a) forbids endorsing or ranking candidates, (b) requires a source URL for every factual claim, and (c) restricts answers to the public-source context loaded from Wikipedia, senate.gov.ph, and Philippine news outlets. Always verify against the cited sources.</p>
+    <h3 style="margin-top:1.5rem">Auto-summarization disclosure</h3>
+    <p>Candidate Issues / Projects sections are auto-structured from public sources (Wikipedia, GDELT, Philippine news outlets). Every claim is shown with a "Sources" footer linking back to the original. Always verify against the cited sources.</p>
   </main>
   <div id="site-footer"></div>
   <script src="js/roster-senate.js"></script>
   <script src="js/roster-house.js"></script>
   <script src="js/candidates-from-roster.js"></script>
   <script src="js/data.js"></script>
-  <script src="js/config.js"></script>
   <script src="js/cors-proxy.js"></script>
   <script src="js/ph-politics-filter.js"></script>
-  <script src="js/keys.js"></script>
   <script src="js/api.js"></script>
   <script src="js/site.js"></script>
-  <script src="js/chat.js"></script>
 </body>
 </html>

@@ -694,7 +694,7 @@ const initPage = {
 
         <section class="profile-section">
           <h2>Multi-platform Mentions</h2>
-          <p class="meta" style="margin-bottom:.5rem">Aggregated from public sources beyond traditional news. Facebook is intentionally excluded — Meta forbids scraping and what those scrapers return is what the candidate's PR team chose to post (i.e. not unbiased). Add a YouTube API key in BayanBot → settings to enable the YouTube row.</p>
+          <p class="meta" style="margin-bottom:.5rem">Aggregated from public sources beyond traditional news. Facebook is intentionally excluded — Meta forbids scraping and what those scrapers return is what the candidate's PR team chose to post (i.e. not unbiased).</p>
           <div id="profile-platforms">
             <p class="empty-soft">Loading…</p>
           </div>
@@ -802,7 +802,7 @@ const initPage = {
               <ul class="platform-list">${d.reddit.slice(0, 6).map((r) => platformCard(r, "reddit")).join("")}</ul>`);
           }
           if (!blocks.length) {
-            plEl.innerHTML = `<p class="empty-soft">No off-news mentions surfaced. (Reddit search is on automatically; YouTube needs a free API key in BayanBot → settings.)</p>`;
+            plEl.innerHTML = `<p class="empty-soft">No off-news mentions surfaced.</p>`;
           } else {
             plEl.innerHTML = blocks.join("");
           }
