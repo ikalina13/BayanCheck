@@ -19,13 +19,14 @@
     chatModel: "bayan_chat_model", // pollinations | gemini-1.5-flash | llama-3.1-70b-versatile | claude-... | gpt-...
   };
 
+  const CONFIG = (global.BAYAN_CONFIG || {});
+
   const DEFAULTS = {
     strictness: "standard",
-    // Gemini is the default — it's the fastest free option but needs a free
-    // API key. Onboarding inside the chat panel walks the user through it
-    // (30 seconds, no credit card). If they skip, we fall back to free
-    // Pollinations which works without any setup.
-    chatModel: "gemini-1.5-flash-latest",
+    // Default to the embedded Gemini key (set in js/config.js). If that key
+    // is missing or rate-limited, BayanBot falls back to free Pollinations
+    // automatically. Users can also paste their own key in ⚙ Settings.
+    chatModel: CONFIG.defaultGeminiModel || "gemini-flash-latest",
   };
 
   function get(name) {
@@ -70,8 +71,12 @@
   function chatProvider() {
     const ant = get("anthropic");
     const oai = get("openai");
-    const gem = get("gemini");
+    const gemUser = get("gemini");
     const grq = get("groq");
+    const embeddedGem = CONFIG.defaultGeminiKey || null;
+    // Prefer the user's key over the embedded one (their own quota)
+    const gem = gemUser || embeddedGem;
+    const usingEmbedded = !gemUser && !!embeddedGem;
     const preferred = (get("chatModel") || DEFAULTS.chatModel).toLowerCase();
 
     if (preferred.startsWith("claude") && ant)
@@ -79,21 +84,20 @@
     if ((preferred.startsWith("gpt") || preferred === "openai") && oai)
       return { provider: "openai", key: oai, model: get("chatModel") };
     if (preferred.startsWith("gemini") && gem)
-      return { provider: "gemini", key: gem, model: get("chatModel") };
+      return { provider: "gemini", key: gem, model: get("chatModel"), embedded: usingEmbedded };
     if ((preferred.includes("llama") || preferred.includes("mixtral") || preferred === "groq") && grq)
       return { provider: "groq", key: grq, model: get("chatModel") };
     if (preferred === "pollinations")
       return { provider: "pollinations", key: null, model: "openai" };
 
     // Preferred model couldn't be served — try any configured key
-    if (gem) return { provider: "gemini", key: gem, model: "gemini-1.5-flash-latest" };
+    if (gem) return { provider: "gemini", key: gem, model: DEFAULTS.chatModel, embedded: usingEmbedded };
     if (grq) return { provider: "groq", key: grq, model: "llama-3.1-70b-versatile" };
     if (ant) return { provider: "anthropic", key: ant, model: "claude-3-5-sonnet-20241022" };
     if (oai) return { provider: "openai", key: oai, model: "gpt-4o-mini" };
 
-    // No keys at all — return null so the UI shows the Gemini onboarding
-    // screen rather than silently falling back to slow Pollinations
-    return null;
+    // No keys at all — use free Pollinations (always works, no setup)
+    return { provider: "pollinations", key: null, model: "openai" };
   }
 
   function pollinationsFallback() {

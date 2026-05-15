@@ -606,21 +606,35 @@
       .slice(0, -1) // exclude the in-flight assistant message
       .slice(-12);
 
+    async function runWith(p) {
+      if (p.provider === "anthropic") return streamAnthropic({ provider: p, systemPrompt, history, userText: text, msg: assistantMsg });
+      if (p.provider === "gemini")    return streamGemini({ provider: p, systemPrompt, history, userText: text, msg: assistantMsg });
+      if (p.provider === "groq")      return streamGroq({ provider: p, systemPrompt, history, userText: text, msg: assistantMsg });
+      if (p.provider === "pollinations") return streamPollinations({ provider: p, systemPrompt, history, userText: text, msg: assistantMsg });
+      return streamOpenAI({ provider: p, systemPrompt, history, userText: text, msg: assistantMsg });
+    }
+
     try {
-      if (provider.provider === "anthropic") {
-        await streamAnthropic({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
-      } else if (provider.provider === "gemini") {
-        await streamGemini({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
-      } else if (provider.provider === "groq") {
-        await streamGroq({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
-      } else if (provider.provider === "pollinations") {
-        await streamPollinations({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
-      } else {
-        await streamOpenAI({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
-      }
+      await runWith(provider);
       finishAssistant(assistantMsg);
     } catch (err) {
-      finishAssistant(assistantMsg, "Error: " + (err && err.message ? err.message : String(err)));
+      // If the embedded Gemini key is rate-limited or revoked, fall back
+      // to free Pollinations so the chat keeps working.
+      const msg = err && err.message ? err.message : String(err);
+      const shouldFallback = provider.provider === "gemini" && /\b(429|403|quota|RESOURCE_EXHAUSTED|PERMISSION_DENIED|invalid)\b/i.test(msg);
+      if (shouldFallback) {
+        assistantMsg.content = "";
+        try {
+          await runWith(global.BayanKeys.pollinationsFallback());
+          assistantMsg.content = "_(Gemini was rate-limited — switched to free Pollinations for this reply.)_\n\n" + assistantMsg.content;
+          finishAssistant(assistantMsg);
+          return;
+        } catch (err2) {
+          finishAssistant(assistantMsg, "Both Gemini and Pollinations failed: " + (err2.message || err2));
+          return;
+        }
+      }
+      finishAssistant(assistantMsg, "Error: " + msg);
     }
   }
 
