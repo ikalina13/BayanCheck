@@ -438,16 +438,7 @@ const initPage = {
     }
 
     renderArticles(BAYAN_NEWS_FALLBACK || []);
-
-    const featured =
-      typeof BAYAN_CANDIDATES !== "undefined"
-        ? BAYAN_CANDIDATES.filter((c) =>
-            ["kiko-pangilinan", "robin-padilla", "risa-hontiveros", "chiz-escudero"].includes(c.slug)
-          )
-        : [];
-    $("#featured-candidates").innerHTML = (featured.length ? featured : (BAYAN_CANDIDATES || []).slice(0, 4))
-      .map(candidateCard)
-      .join("");
+    // Featured Officials sidebar block removed per user request.
 
     // "This Week in the Senate" sidebar block (non-blocking)
     if (window.BayanAPI && BayanAPI.hearings) {

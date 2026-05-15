@@ -21,7 +21,11 @@
 
   const DEFAULTS = {
     strictness: "standard",
-    chatModel: "pollinations", // free, no key required
+    // Gemini is the default — it's the fastest free option but needs a free
+    // API key. Onboarding inside the chat panel walks the user through it
+    // (30 seconds, no credit card). If they skip, we fall back to free
+    // Pollinations which works without any setup.
+    chatModel: "gemini-1.5-flash-latest",
   };
 
   function get(name) {
@@ -78,18 +82,23 @@
       return { provider: "gemini", key: gem, model: get("chatModel") };
     if ((preferred.includes("llama") || preferred.includes("mixtral") || preferred === "groq") && grq)
       return { provider: "groq", key: grq, model: get("chatModel") };
-    if (preferred === "pollinations" || !preferred)
+    if (preferred === "pollinations")
       return { provider: "pollinations", key: null, model: "openai" };
 
-    // Preferred model couldn't be served — try any configured paid key
-    if (ant) return { provider: "anthropic", key: ant, model: "claude-3-5-sonnet-20241022" };
+    // Preferred model couldn't be served — try any configured key
     if (gem) return { provider: "gemini", key: gem, model: "gemini-1.5-flash-latest" };
     if (grq) return { provider: "groq", key: grq, model: "llama-3.1-70b-versatile" };
+    if (ant) return { provider: "anthropic", key: ant, model: "claude-3-5-sonnet-20241022" };
     if (oai) return { provider: "openai", key: oai, model: "gpt-4o-mini" };
 
-    // No keys at all — use free Pollinations
+    // No keys at all — return null so the UI shows the Gemini onboarding
+    // screen rather than silently falling back to slow Pollinations
+    return null;
+  }
+
+  function pollinationsFallback() {
     return { provider: "pollinations", key: null, model: "openai" };
   }
 
-  global.BayanKeys = { get, set, has, clearAll, chatProvider, DEFAULTS, STORE };
+  global.BayanKeys = { get, set, has, clearAll, chatProvider, pollinationsFallback, DEFAULTS, STORE };
 })(window);

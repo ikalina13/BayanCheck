@@ -365,22 +365,48 @@
   function renderEmptyState() {
     const provider = global.BayanKeys.chatProvider();
     const slug = getCurrentCandidateSlug();
-    const intro = slug
-      ? `Ask anything about <strong>${(global.BAYAN_CANDIDATES || []).find((c) => c.slug === slug)?.fullName || "this candidate"}</strong> — I've already loaded their public profile.`
+    const candName = slug && global.BAYAN_CANDIDATES
+      ? (global.BAYAN_CANDIDATES.find((c) => c.slug === slug) || {}).fullName
+      : null;
+
+    if (!provider) {
+      // No usable key yet → show clean Gemini onboarding screen.
+      return `
+        <div class="bayanbot-empty">
+          <div class="bayanbot-empty-emoji">🇵🇭</div>
+          <div class="bayanbot-empty-title">BayanBot needs a free key (30 sec)</div>
+          <div class="bayanbot-empty-text">
+            Powered by <strong>Google Gemini</strong> — fast, free, no credit card. Two steps:
+          </div>
+        </div>
+        <div class="bayanbot-onboard">
+          <ol style="margin:0 0 .35rem 1.05rem">
+            <li>Click <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"><strong>aistudio.google.com/app/apikey</strong></a> → "Create API key"</li>
+            <li>Copy the key and paste it here:</li>
+          </ol>
+          <input type="password" id="bayanbot-quickkey" placeholder="Paste your Gemini key (AIza...)" autocomplete="off">
+          <div style="display:flex;gap:.4rem;margin-top:.4rem">
+            <button type="button" class="bayanbot-send" id="bayanbot-quicksave" style="flex:1">Save &amp; start chatting</button>
+          </div>
+          <p style="font-size:.72rem;color:var(--muted);margin:.55rem 0 0">
+            Your key stays in this browser only — sent only to Google's official API. Or
+            <a href="#" id="bayanbot-skip-onboard">skip for now and use Pollinations</a> (slower, no key needed).
+          </p>
+        </div>`;
+    }
+
+    const intro = candName
+      ? `Ask anything about <strong>${escapeHtml(candName)}</strong> — I've already loaded their public profile.`
       : "Ask anything about Philippine politics, senators, bills, or upcoming Senate hearings.";
     const sugs = SUGGESTIONS.map(
       (s) => `<button type="button" class="bayanbot-suggestion" data-suggestion="${escapeAttr(s)}">${escapeHtml(s)}</button>`
     ).join("");
     const modelLabel =
-      provider.provider === "pollinations"
-        ? "Pollinations (free, no key needed)"
-        : provider.provider === "gemini"
-          ? "Google Gemini (your free key)"
-          : provider.provider === "groq"
-            ? "Groq (your free key)"
-            : provider.provider === "anthropic"
-              ? "Anthropic Claude (your key)"
-              : "OpenAI (your key)";
+      provider.provider === "pollinations" ? "Pollinations (free, no key)"
+      : provider.provider === "gemini" ? "Google Gemini (free)"
+      : provider.provider === "groq" ? "Groq Llama 3.1 (free)"
+      : provider.provider === "anthropic" ? "Anthropic Claude"
+      : "OpenAI";
     return `
       <div class="bayanbot-empty">
         <div class="bayanbot-empty-emoji">🇵🇭</div>
@@ -388,7 +414,7 @@
         <div class="bayanbot-empty-text">${intro}</div>
         <div class="bayanbot-suggestions">${sugs}</div>
         <p style="font-size:.7rem;color:var(--muted);margin-top:.75rem">
-          Active model: <strong>${escapeHtml(modelLabel)}</strong>. Want better quality? Add a free Gemini or Groq key in ⚙ Settings.
+          Active model: <strong>${escapeHtml(modelLabel)}</strong>${provider.provider === "pollinations" ? ' · <a href="#" id="bayanbot-upgrade-link">Upgrade to Gemini (free)</a>' : ''}
         </p>
       </div>`;
   }
@@ -399,6 +425,52 @@
         handleSend(btn.dataset.suggestion);
       });
     });
+
+    // Quick-save Gemini key from onboarding screen
+    const quickSave = document.getElementById("bayanbot-quicksave");
+    if (quickSave) {
+      const input = document.getElementById("bayanbot-quickkey");
+      const submit = () => {
+        const v = (input.value || "").trim();
+        if (!v) {
+          input.focus();
+          input.style.borderColor = "var(--danger)";
+          return;
+        }
+        global.BayanKeys.set("gemini", v);
+        global.BayanKeys.set("chatModel", "gemini-1.5-flash-latest");
+        addSystem("Saved. Using Google Gemini.");
+        renderMessages();
+      };
+      quickSave.addEventListener("click", submit);
+      if (input) {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") { e.preventDefault(); submit(); }
+        });
+      }
+    }
+
+    // "Skip and use Pollinations" link from onboarding
+    const skipLink = document.getElementById("bayanbot-skip-onboard");
+    if (skipLink) {
+      skipLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        global.BayanKeys.set("chatModel", "pollinations");
+        addSystem("Using free Pollinations (slower; you can switch to Gemini in ⚙ later).");
+        renderMessages();
+      });
+    }
+
+    // "Upgrade to Gemini" from the Pollinations footer
+    const upgradeLink = document.getElementById("bayanbot-upgrade-link");
+    if (upgradeLink) {
+      upgradeLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        // force the onboarding screen to show by clearing pollinations preference
+        global.BayanKeys.set("chatModel", "gemini-1.5-flash-latest");
+        renderMessages();
+      });
+    }
   }
 
   function renderMsg(m) {
@@ -485,11 +557,11 @@
   }
 
   async function handleSend(text) {
-    const provider = global.BayanKeys.chatProvider();
+    let provider = global.BayanKeys.chatProvider();
     if (!provider) {
-      // Should never happen — chatProvider() always falls back to free Pollinations
-      addSystem("No chat provider available — please reload the page.");
-      return;
+      // No key set yet → fall back to free Pollinations transparently for
+      // this one message rather than blocking the user.
+      provider = global.BayanKeys.pollinationsFallback();
     }
 
     // Topic guard on the user's message (loose — let the model respond, but flag clearly off-topic)
@@ -590,9 +662,11 @@
         try {
           const j = JSON.parse(data);
           const delta = j.choices && j.choices[0] && j.choices[0].delta;
-          // Pollinations streams 'reasoning' tokens before 'content' — ignore
-          // reasoning, surface only content.
+          // Pollinations sometimes streams long 'reasoning' deltas before
+          // emitting any 'content'. Surface BOTH so the user sees real-time
+          // progress instead of staring at a blank typing indicator.
           if (delta && delta.content) onText(delta.content);
+          else if (delta && delta.reasoning) onText(delta.reasoning);
         } catch (e) {
           if (e instanceof SyntaxError) continue;
           throw e;
