@@ -11,11 +11,47 @@
   <div id="site-header"></div>
   <main class="container" style="padding:2rem 1rem;max-width:42rem">
     <h1>FAQ</h1>
-    <p style="margin:1rem 0"><strong>What do color badges mean?</strong><br>Green = clean record; orange = pending; red = serious issues.</p>
-    <p style="margin:1rem 0"><strong>Are allegations convictions?</strong><br>No. Status is shown for each case.</p>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">What do the colored badges mean?</h2>
+    <p>Each candidate carries one of three short-list integrity badges:</p>
+    <ul style="margin:.5rem 0 1rem 1.25rem;color:var(--muted-strong)">
+      <li><span class="severity clean">Clean</span> — no major item on our short public-issues list. Verify anyway.</li>
+      <li><span class="severity pending">Public issues</span> — controversies or legal/ethics matters widely reported in mainstream PH media.</li>
+      <li><span class="severity serious">Serious legal</span> — the highest tier (e.g. ICC scrutiny). Not a court ruling.</li>
+    </ul>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">Where does the news come from?</h2>
+    <p>BayanCheck aggregates Philippine news live from public RSS feeds — Rappler, Inquirer, ABS-CBN News, GMA, Manila Bulletin, Philstar, Vera Files, Bilyonaryo, plus GDELT 2.0 (filtered to Philippine sources). Every headline links back to its original outlet. We don't republish full articles; we link out so you can read at the source.</p>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">How are Issues &amp; Projects filled in?</h2>
+    <p>Each candidate's Issues, Projects, Recent Coverage, and Multi-platform Mentions sections are auto-populated from <strong>Wikipedia + GDELT + Reddit</strong> at page load. Sections marked <span class="ai-badge">AUTO</span> are structured automatically; every claim has a "Sources" footer linking to where it came from. If a section is empty, that means the public sources don't have it yet — please continue to verify.</p>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">How are Senate hearing dates tracked?</h2>
+    <p>The "Upcoming Senate Hearings" panel on each senator's profile is scraped live from the official Senate of the Philippines committee calendar (<a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">web.senate.gov.ph/committee/calendar.asp</a>) and matched against the senator's name. Refreshes every hour.</p>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">What is BayanBot?</h2>
+    <p>BayanBot is the floating chat assistant in the bottom-right corner. It's a strictly-guarded AI helper that ONLY answers questions about Philippine politics, government, and elections. It cites a source URL for every factual claim and refuses to endorse or rank candidates.</p>
+    <p>To use it, click the 💬 button, then click ⚙ to paste your own free Anthropic Claude API key (or OpenAI key). Keys are stored only in your browser. <a href="about.html#privacy">More on privacy →</a></p>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">Is the AI 100% unbiased?</h2>
+    <p>No AI is. We mitigate by (1) hard-coding a "neutral, no endorsements, cite every claim" system prompt, (2) restricting BayanBot to facts in the loaded context (Wikipedia + PH news + Senate records), and (3) flagging if it ever cites a non-Philippine source. Always verify against the cited links.</p>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">Why no Facebook integration?</h2>
+    <p>Meta's terms of service forbid scraping, and the third-party scraper APIs that try anyway return what the candidate's PR team chose to post — which is the opposite of unbiased. If you want official Facebook page integration we'll need a Meta Developer App + Page Access Token; without that, we use Reddit + YouTube + the wider news net to surface multi-platform mentions.</p>
+
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">Are allegations the same as convictions?</h2>
+    <p>No. Each issue is labeled with its status (allegation / pending / under investigation / hearing / dismissed / resolved / convicted) and links to the original public source.</p>
   </main>
   <div id="site-footer"></div>
+  <script src="js/roster-senate.js"></script>
+  <script src="js/roster-house.js"></script>
+  <script src="js/candidates-from-roster.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/cors-proxy.js"></script>
+  <script src="js/ph-politics-filter.js"></script>
+  <script src="js/keys.js"></script>
+  <script src="js/api.js"></script>
   <script src="js/site.js"></script>
+  <script src="js/chat.js"></script>
 </body>
 </html>

@@ -289,6 +289,7 @@ function renderFooter() {
         </ul>
       </div>
     </div>
+    <p class="global-disclaimer">News is fetched live from listed Philippine outlets — verify on the source. Candidate Issues / Projects sections are auto-structured from public sources (Wikipedia, GDELT, PH news); AI assistants are not 100% unbiased — verify all citations.</p>
     <p class="footer-copy container">© ${new Date().getFullYear()} BayanCheck. For voter education only. Not affiliated with COMELEC.</p>
   </footer>`;
 }
