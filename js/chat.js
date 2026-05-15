@@ -576,27 +576,32 @@
     addUser(text);
     const assistantMsg = startAssistant();
 
-    // Gather context: candidate (if on a candidate page), latest news headlines, hearings
+    // Gather context with a HARD 3-second deadline so we never make the user
+    // wait on slow background fetches before the AI starts replying. Any
+    // context that's already cached returns instantly; anything that would
+    // still be in flight is silently skipped.
     let candidateCtx = null;
-    const slug = getCurrentCandidateSlug();
-    try {
-      if (slug && global.BayanAPI) {
-        const r = await global.BayanAPI.candidateProfile(slug);
-        if (r && r.ok) candidateCtx = r.data;
-      }
-    } catch (e) {}
     let newsCtx = [];
     let hearingsCtx = [];
-    try {
-      if (global.BayanAPI) {
-        const [n, h] = await Promise.all([
-          global.BayanAPI.news({ limit: 18 }),
-          global.BayanAPI.hearings({ limit: 12, slug }),
-        ]);
-        if (n && n.ok) newsCtx = n.data.items || [];
-        if (h && h.ok) hearingsCtx = h.data || [];
-      }
-    } catch (e) {}
+    const slug = getCurrentCandidateSlug();
+    const ctxPromises = [];
+    if (slug && global.BayanAPI) {
+      ctxPromises.push(
+        global.BayanAPI.candidateProfile(slug).then((r) => { if (r && r.ok) candidateCtx = r.data; }).catch(() => {})
+      );
+    }
+    if (global.BayanAPI) {
+      ctxPromises.push(
+        global.BayanAPI.news({ limit: 18 }).then((n) => { if (n && n.ok) newsCtx = n.data.items || []; }).catch(() => {})
+      );
+      ctxPromises.push(
+        global.BayanAPI.hearings({ limit: 12, slug }).then((h) => { if (h && h.ok) hearingsCtx = h.data || []; }).catch(() => {})
+      );
+    }
+    await Promise.race([
+      Promise.all(ctxPromises),
+      new Promise((res) => setTimeout(res, 3000)),
+    ]);
 
     const systemPrompt = buildSystemPrompt(candidateCtx, hearingsCtx, newsCtx);
 
