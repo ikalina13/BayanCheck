@@ -331,17 +331,13 @@ function candidateCard(c) {
   return `
   <a href="candidate.html?slug=${c.slug}" class="candidate-card reveal" style="text-decoration:none;color:inherit">
     <img src="${c.photoUrl}" alt="${escAttr(c.fullName)}" loading="lazy" data-initials-fallback="${ini}"${commons}${wikiFb}>
+    <span class="severity ${c.issueSeverity} candidate-card-badge">${issueSeverityLabel(c.issueSeverity)}</span>
     <div class="candidate-card-body">
-      <div style="display:flex;justify-content:space-between;gap:.5rem">
-        <div>
-          <h3 style="font-size:1.1rem">${c.fullName}</h3>
-          <p class="meta">${c.position} · ${c.party}</p>
-          ${termNote}
-        </div>
-        <span class="severity ${c.issueSeverity}">${issueSeverityLabel(c.issueSeverity)}</span>
-      </div>
-      <p style="font-size:.875rem;margin-top:.5rem">${c.summary}</p>
-      ${serious ? `<p style="font-size:.75rem;color:var(--danger);margin-top:.5rem">🔴 ${serious} serious issue(s)</p>` : ""}
+      <h3>${c.fullName}</h3>
+      <p class="meta">${c.position} · ${c.party}</p>
+      ${termNote}
+      <p class="candidate-card-summary">${c.summary}</p>
+      ${serious ? `<p class="candidate-card-flag">🔴 ${serious} serious issue(s)</p>` : ""}
     </div>
   </a>`;
 }
@@ -467,12 +463,17 @@ const initPage = {
     $("#profile-root").innerHTML = `
       <div class="profile-header container">
         <img class="profile-photo reveal" src="${c.photoUrl}" alt="${escAttr(c.fullName)}" data-initials-fallback="${ini}"${commons}${wikiFb}>
-        <div>
-          <span class="severity ${c.issueSeverity}">${issueSeverityLabel(c.issueSeverity)}</span>
+        <div class="profile-header-body">
           <h1>${c.fullName}</h1>
-          <p class="meta">${c.position} · ${c.party}${c.region ? " · " + c.region : ""}</p>
-          <p style="margin-top:1rem">${c.summary}</p>
-          <p class="meta" style="margin-top:.5rem">Last verified: ${c.lastVerified}</p>
+          <div class="profile-meta-row">
+            <span>${c.position}</span>
+            <span class="dot" aria-hidden="true"></span>
+            <span>${c.party}</span>
+            ${c.region ? '<span class="dot" aria-hidden="true"></span><span>' + c.region + '</span>' : ''}
+            <span class="severity ${c.issueSeverity} severity--lg">${issueSeverityLabel(c.issueSeverity)}</span>
+          </div>
+          <p class="profile-summary">${c.summary}</p>
+          <p class="profile-verified">Last verified: ${c.lastVerified}</p>
           ${wikiLink}
         </div>
       </div>
