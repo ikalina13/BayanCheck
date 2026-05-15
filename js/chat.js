@@ -55,34 +55,55 @@
             </div>
           </div>
           <div class="bayanbot-subtitle">
-            Neutral PH voter-info assistant · cites every claim · won't endorse candidates
+            Free PH voter-info AI · cites every claim · won't endorse candidates
           </div>
           <div id="bayanbot-context-pill-wrap"></div>
           <div class="bayanbot-settings" id="bayanbot-settings" role="dialog" aria-label="BayanBot settings">
-            <h5>API keys (stored in this browser only)</h5>
-            <label for="bayanbot-key-anthropic">Anthropic API key (Claude — recommended)</label>
+            <h5>Chat model</h5>
+            <label for="bayanbot-model">Preferred chat model</label>
+            <select id="bayanbot-model">
+              <option value="pollinations">Pollinations (free · no key needed · default)</option>
+              <option value="gemini-1.5-flash-latest">Google Gemini 1.5 Flash (free key)</option>
+              <option value="gemini-1.5-pro-latest">Google Gemini 1.5 Pro (free key)</option>
+              <option value="llama-3.1-70b-versatile">Groq · Llama 3.1 70B (free key, fast)</option>
+              <option value="llama-3.1-8b-instant">Groq · Llama 3.1 8B (free key, fastest)</option>
+              <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (paid)</option>
+              <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (paid)</option>
+              <option value="gpt-4o-mini">OpenAI GPT-4o mini (paid)</option>
+              <option value="gpt-4o">OpenAI GPT-4o (paid)</option>
+            </select>
+            <small>Pollinations is free and works instantly — no key, no signup. The other free options need a free API key.</small>
+
+            <h5 style="margin-top:.85rem">API keys (optional, stored in this browser only)</h5>
+
+            <label for="bayanbot-key-gemini">Google Gemini key (FREE)</label>
+            <input type="password" id="bayanbot-key-gemini" autocomplete="off" placeholder="AIza…">
+            <small><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get a free Gemini key →</a> (no credit card needed)</small>
+
+            <label for="bayanbot-key-groq">Groq key (FREE, very fast)</label>
+            <input type="password" id="bayanbot-key-groq" autocomplete="off" placeholder="gsk_…">
+            <small><a href="https://console.groq.com/keys" target="_blank" rel="noopener">Get a free Groq key →</a></small>
+
+            <label for="bayanbot-key-anthropic">Anthropic Claude key (paid)</label>
             <input type="password" id="bayanbot-key-anthropic" autocomplete="off" placeholder="sk-ant-…">
-            <small><a href="https://console.anthropic.com/" target="_blank" rel="noopener">Get a free Claude key →</a></small>
-            <label for="bayanbot-key-openai">OpenAI API key (GPT-4o fallback)</label>
+            <small><a href="https://console.anthropic.com/" target="_blank" rel="noopener">Get a Claude key →</a></small>
+
+            <label for="bayanbot-key-openai">OpenAI key (paid)</label>
             <input type="password" id="bayanbot-key-openai" autocomplete="off" placeholder="sk-…">
             <small><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">Get an OpenAI key →</a></small>
+
             <label for="bayanbot-key-youtube">YouTube Data API key (optional)</label>
             <input type="password" id="bayanbot-key-youtube" autocomplete="off" placeholder="AIza…">
             <small><a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">Get a YouTube key →</a></small>
+
             <label for="bayanbot-key-rss2json">rss2json key (optional, raises news quota)</label>
             <input type="password" id="bayanbot-key-rss2json" autocomplete="off" placeholder="">
+
             <label for="bayanbot-strictness">Topic strictness (PH politics filter)</label>
             <select id="bayanbot-strictness">
               <option value="loose">Loose — accept anything PH-related</option>
               <option value="standard" selected>Standard — recommended</option>
               <option value="strict">Strict — only obvious PH-politics items</option>
-            </select>
-            <label for="bayanbot-model">Preferred chat model</label>
-            <select id="bayanbot-model">
-              <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (default)</option>
-              <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (faster/cheaper)</option>
-              <option value="gpt-4o-mini">OpenAI GPT-4o mini</option>
-              <option value="gpt-4o">OpenAI GPT-4o</option>
             </select>
             <div class="bayanbot-settings-actions">
               <button type="button" id="bayanbot-clear-keys">Clear keys</button>
@@ -207,16 +228,20 @@
 
   function hydrateSettings() {
     const k = global.BayanKeys;
+    document.getElementById("bayanbot-key-gemini").value = k.get("gemini") || "";
+    document.getElementById("bayanbot-key-groq").value = k.get("groq") || "";
     document.getElementById("bayanbot-key-anthropic").value = k.get("anthropic") || "";
     document.getElementById("bayanbot-key-openai").value = k.get("openai") || "";
     document.getElementById("bayanbot-key-youtube").value = k.get("youtube") || "";
     document.getElementById("bayanbot-key-rss2json").value = k.get("rss2json") || "";
     document.getElementById("bayanbot-strictness").value = k.get("strictness") || "standard";
-    document.getElementById("bayanbot-model").value = k.get("chatModel") || "claude-3-5-sonnet-20241022";
+    document.getElementById("bayanbot-model").value = k.get("chatModel") || "pollinations";
   }
 
   function saveSettings() {
     const k = global.BayanKeys;
+    k.set("gemini", document.getElementById("bayanbot-key-gemini").value.trim());
+    k.set("groq", document.getElementById("bayanbot-key-groq").value.trim());
     k.set("anthropic", document.getElementById("bayanbot-key-anthropic").value.trim());
     k.set("openai", document.getElementById("bayanbot-key-openai").value.trim());
     k.set("youtube", document.getElementById("bayanbot-key-youtube").value.trim());
@@ -224,7 +249,8 @@
     k.set("strictness", document.getElementById("bayanbot-strictness").value);
     k.set("chatModel", document.getElementById("bayanbot-model").value);
     document.getElementById("bayanbot-settings").classList.remove("is-open");
-    addSystem("Saved. Anthropic key " + (k.has("anthropic") ? "✓" : "✗") + " · OpenAI " + (k.has("openai") ? "✓" : "✗") + " · YouTube " + (k.has("youtube") ? "✓" : "✗"));
+    const provider = k.chatProvider();
+    addSystem("Saved. Active model: " + (provider ? provider.provider + (provider.model ? " (" + provider.model + ")" : "") : "none"));
     renderMessages();
   }
 
@@ -338,23 +364,6 @@
 
   function renderEmptyState() {
     const provider = global.BayanKeys.chatProvider();
-    if (!provider) {
-      return `
-        <div class="bayanbot-empty">
-          <div class="bayanbot-empty-emoji">👋</div>
-          <div class="bayanbot-empty-title">Welcome to BayanBot</div>
-          <div class="bayanbot-empty-text">A neutral assistant for Filipino voter info — cites every claim, won't endorse candidates.</div>
-        </div>
-        <div class="bayanbot-onboard">
-          <h4>To start, paste a free Claude API key</h4>
-          <ol>
-            <li>Visit <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a></li>
-            <li>Sign up and create an API key (free credit included)</li>
-            <li>Click the ⚙ icon above to paste it</li>
-          </ol>
-          <p style="font-size:.78rem;color:var(--muted);margin:0">Or use OpenAI's GPT-4o by pasting an OpenAI key. Keys live in this browser only.</p>
-        </div>`;
-    }
     const slug = getCurrentCandidateSlug();
     const intro = slug
       ? `Ask anything about <strong>${(global.BAYAN_CANDIDATES || []).find((c) => c.slug === slug)?.fullName || "this candidate"}</strong> — I've already loaded their public profile.`
@@ -362,12 +371,25 @@
     const sugs = SUGGESTIONS.map(
       (s) => `<button type="button" class="bayanbot-suggestion" data-suggestion="${escapeAttr(s)}">${escapeHtml(s)}</button>`
     ).join("");
+    const modelLabel =
+      provider.provider === "pollinations"
+        ? "Pollinations (free, no key needed)"
+        : provider.provider === "gemini"
+          ? "Google Gemini (your free key)"
+          : provider.provider === "groq"
+            ? "Groq (your free key)"
+            : provider.provider === "anthropic"
+              ? "Anthropic Claude (your key)"
+              : "OpenAI (your key)";
     return `
       <div class="bayanbot-empty">
         <div class="bayanbot-empty-emoji">🇵🇭</div>
         <div class="bayanbot-empty-title">Ready</div>
         <div class="bayanbot-empty-text">${intro}</div>
         <div class="bayanbot-suggestions">${sugs}</div>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:.75rem">
+          Active model: <strong>${escapeHtml(modelLabel)}</strong>. Want better quality? Add a free Gemini or Groq key in ⚙ Settings.
+        </p>
       </div>`;
   }
 
@@ -465,7 +487,8 @@
   async function handleSend(text) {
     const provider = global.BayanKeys.chatProvider();
     if (!provider) {
-      addSystem("Add an Anthropic or OpenAI key in ⚙ Settings to start chatting.");
+      // Should never happen — chatProvider() always falls back to free Pollinations
+      addSystem("No chat provider available — please reload the page.");
       return;
     }
 
@@ -514,12 +537,174 @@
     try {
       if (provider.provider === "anthropic") {
         await streamAnthropic({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
+      } else if (provider.provider === "gemini") {
+        await streamGemini({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
+      } else if (provider.provider === "groq") {
+        await streamGroq({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
+      } else if (provider.provider === "pollinations") {
+        await streamPollinations({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
       } else {
         await streamOpenAI({ provider, systemPrompt, history, userText: text, msg: assistantMsg });
       }
       finishAssistant(assistantMsg);
     } catch (err) {
       finishAssistant(assistantMsg, "Error: " + (err && err.message ? err.message : String(err)));
+    }
+  }
+
+  async function streamPollinations({ systemPrompt, history, userText, msg }) {
+    // Pollinations is OpenAI-compatible and FREE (no key needed).
+    // Endpoint: https://text.pollinations.ai/openai
+    const body = {
+      model: "openai",
+      stream: true,
+      messages: [{ role: "system", content: systemPrompt }]
+        .concat(history.map((m) => ({ role: m.role, content: m.content })))
+        .concat([{ role: "user", content: userText }]),
+      max_tokens: 1024,
+      temperature: 0.4,
+    };
+    const resp = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error("Pollinations " + resp.status + ": " + text.slice(0, 240));
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    const onText = onChunk(msg);
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split(/\r?\n/);
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const j = JSON.parse(data);
+          const delta = j.choices && j.choices[0] && j.choices[0].delta;
+          // Pollinations streams 'reasoning' tokens before 'content' — ignore
+          // reasoning, surface only content.
+          if (delta && delta.content) onText(delta.content);
+        } catch (e) {
+          if (e instanceof SyntaxError) continue;
+          throw e;
+        }
+      }
+    }
+  }
+
+  async function streamGemini({ provider, systemPrompt, history, userText, msg }) {
+    // Google Gemini — FREE tier with a free key from https://aistudio.google.com
+    const model = provider.model || "gemini-1.5-flash-latest";
+    const url =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      encodeURIComponent(model) +
+      ":streamGenerateContent?alt=sse&key=" +
+      encodeURIComponent(provider.key);
+    // Gemini's content format: roles user/model only. System goes in systemInstruction.
+    const contents = history
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }))
+      .concat([{ role: "user", parts: [{ text: userText }] }]);
+    const body = {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: { maxOutputTokens: 1024, temperature: 0.4 },
+    };
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error("Gemini " + resp.status + ": " + text.slice(0, 240));
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    const onText = onChunk(msg);
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split(/\r?\n/);
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const j = JSON.parse(data);
+          const parts = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
+          if (parts) {
+            for (const p of parts) if (p.text) onText(p.text);
+          }
+        } catch (e) {
+          if (e instanceof SyntaxError) continue;
+          throw e;
+        }
+      }
+    }
+  }
+
+  async function streamGroq({ provider, systemPrompt, history, userText, msg }) {
+    // Groq — FREE tier with a free key from https://console.groq.com
+    // OpenAI-compatible at https://api.groq.com/openai/v1/chat/completions
+    const body = {
+      model: provider.model || "llama-3.1-70b-versatile",
+      stream: true,
+      messages: [{ role: "system", content: systemPrompt }]
+        .concat(history.map((m) => ({ role: m.role, content: m.content })))
+        .concat([{ role: "user", content: userText }]),
+      max_tokens: 1024,
+      temperature: 0.4,
+    };
+    const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer " + provider.key,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error("Groq " + resp.status + ": " + text.slice(0, 240));
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    const onText = onChunk(msg);
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split(/\r?\n/);
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const j = JSON.parse(data);
+          const delta = j.choices && j.choices[0] && j.choices[0].delta;
+          if (delta && delta.content) onText(delta.content);
+        } catch (e) {
+          if (e instanceof SyntaxError) continue;
+          throw e;
+        }
+      }
     }
   }
 

@@ -48,10 +48,13 @@ Cached 24 h per candidate.
 
 ## AI chat
 
-- **Anthropic Claude** (default, model `claude-3-5-sonnet-20241022`) — browser-direct via the documented `anthropic-dangerous-direct-browser-access: true` header.
-- **OpenAI GPT-4o** (fallback) — browser-direct via standard chat completions API.
+- **Pollinations** (default, model `openai` / GPT-OSS 20B) — browser-direct, FREE, no key, no signup. OpenAI-compatible streaming endpoint at `https://text.pollinations.ai/openai`.
+- **Google Gemini 1.5 Flash / Pro** — FREE tier with a free API key from https://aistudio.google.com/app/apikey. Browser-direct streaming.
+- **Groq · Llama 3.1 70B / 8B** — FREE tier with a free API key from https://console.groq.com/keys. Browser-direct, very fast.
+- **Anthropic Claude** (paid) — browser-direct via the documented `anthropic-dangerous-direct-browser-access: true` header.
+- **OpenAI GPT-4o** (paid) — browser-direct via standard chat completions API.
 
-User supplies their own key. Stored in `localStorage` only.
+User supplies any optional key. Stored in `localStorage` only.
 
 System prompt (loaded into every request):
 - Hard rule: only answer Philippine-politics questions.

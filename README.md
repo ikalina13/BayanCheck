@@ -7,7 +7,7 @@ Pure-static site for Philippine voter education. **Zero backend.** Deploys to Gi
 - **Live Philippine news** scraped from 11 PH outlets (Rappler, Inquirer, ABS-CBN, GMA, Manila Bulletin, Philstar, Vera Files, Bilyonaryo + GDELT) via `rss2json` + free CORS proxies.
 - **Senate hearing tracker** — scrapes `web.senate.gov.ph/committee/calendar.asp` and matches hearings to each senator.
 - **Candidate enrichment** — Wikipedia + Wikidata + GDELT + Reddit aggregated per senator, with inline source citations on every claim.
-- **BayanBot** — floating chat assistant in the bottom-right. Bring-your-own Anthropic Claude or OpenAI key (browser-direct API). Strict "PH politics only, cite every claim, never endorse a candidate" system prompt.
+- **BayanBot** — floating chat assistant in the bottom-right. **Free out of the box** (uses [Pollinations](https://pollinations.ai/) — no key, no signup). Optional upgrade to free Google Gemini, free Groq Llama 3.1, or paid Claude / OpenAI. Strict "PH politics only, cite every claim, never endorse a candidate" system prompt.
 - **24 senators of the 20th Congress** plus House leadership, real names, Wikimedia Commons portraits.
 
 ## Run locally
@@ -36,18 +36,23 @@ python3 -m http.server 8000
 | Recent media coverage per candidate | GDELT 2.0 (`"<full name>" sourcecountry:RP`) | direct |
 | Citizen mentions | Reddit `r/Philippines/search.json` | direct → CORS proxy fallback |
 | YouTube videos (optional) | YouTube Data API v3 | user-supplied key |
-| Chat assistant | Anthropic Claude / OpenAI | user-supplied key, browser-direct |
+| Chat assistant (default) | Pollinations (`text.pollinations.ai`) | free, no key required |
+| Chat assistant (optional) | Google Gemini / Groq / Claude / OpenAI | user-supplied key, browser-direct |
 
 See [`docs/SOURCES.md`](docs/SOURCES.md) for the full list, including the three-layer "Filipino politics only" filter.
 
-## API keys (optional, for chat + YouTube)
+## API keys
 
-Click the 💬 chat bubble bottom-right → ⚙ Settings → paste keys.
+**You don't need any keys to use BayanBot** — the default Pollinations provider is free and requires no signup. Click the 💬 chat bubble and start asking questions.
 
-- **Anthropic** (recommended): https://console.anthropic.com/ — free credit on signup.
-- **OpenAI** (fallback): https://platform.openai.com/api-keys
-- **YouTube Data API v3**: https://console.cloud.google.com/apis/library/youtube.googleapis.com
-- **rss2json** (raises news quota): https://rss2json.com/
+If you want higher-quality answers, click the 💬 chat bubble → ⚙ Settings → paste a key:
+
+- **Google Gemini** (FREE): https://aistudio.google.com/app/apikey — no credit card needed.
+- **Groq · Llama 3.1 70B** (FREE, very fast): https://console.groq.com/keys
+- **Anthropic Claude** (paid): https://console.anthropic.com/
+- **OpenAI** (paid): https://platform.openai.com/api-keys
+- **YouTube Data API v3** (optional, for senator videos): https://console.cloud.google.com/apis/library/youtube.googleapis.com
+- **rss2json** (optional, raises news quota): https://rss2json.com/
 
 Keys are stored only in this browser's `localStorage` and sent ONLY to the official API endpoint of each provider. BayanCheck never sees them. Full privacy details in `about.html#privacy`.
 

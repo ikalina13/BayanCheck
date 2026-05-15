@@ -11,15 +11,17 @@
   const STORE = {
     anthropic: "bayan_anthropic_key",
     openai: "bayan_openai_key",
+    gemini: "bayan_gemini_key",
+    groq: "bayan_groq_key",
     youtube: "bayan_youtube_key",
     rss2json: "bayan_rss2json_key",
     strictness: "bayan_topic_strictness", // strict | standard | loose
-    chatModel: "bayan_chat_model", // claude-3-5-sonnet-20241022 | gpt-4o-mini | etc
+    chatModel: "bayan_chat_model", // pollinations | gemini-1.5-flash | llama-3.1-70b-versatile | claude-... | gpt-...
   };
 
   const DEFAULTS = {
     strictness: "standard",
-    chatModel: "claude-3-5-sonnet-20241022",
+    chatModel: "pollinations", // free, no key required
   };
 
   function get(name) {
@@ -57,18 +59,36 @@
     return v != null && v !== "" && v !== DEFAULTS[name];
   }
 
-  // Returns the available chat provider config, picking the user's preferred
-  // model and falling back from Anthropic → OpenAI as needed.
+  // Returns the chat-provider config to use, picking the user's preferred
+  // model and degrading toward free Pollinations as needed.
+  // Pollinations is the no-key default — chatProvider() ALWAYS returns
+  // something usable, even when the user hasn't set any keys.
   function chatProvider() {
     const ant = get("anthropic");
     const oai = get("openai");
-    const preferred = get("chatModel") || DEFAULTS.chatModel;
-    const isClaude = preferred.toLowerCase().startsWith("claude");
-    if (isClaude && ant) return { provider: "anthropic", key: ant, model: preferred };
-    if (!isClaude && oai) return { provider: "openai", key: oai, model: preferred };
+    const gem = get("gemini");
+    const grq = get("groq");
+    const preferred = (get("chatModel") || DEFAULTS.chatModel).toLowerCase();
+
+    if (preferred.startsWith("claude") && ant)
+      return { provider: "anthropic", key: ant, model: get("chatModel") };
+    if ((preferred.startsWith("gpt") || preferred === "openai") && oai)
+      return { provider: "openai", key: oai, model: get("chatModel") };
+    if (preferred.startsWith("gemini") && gem)
+      return { provider: "gemini", key: gem, model: get("chatModel") };
+    if ((preferred.includes("llama") || preferred.includes("mixtral") || preferred === "groq") && grq)
+      return { provider: "groq", key: grq, model: get("chatModel") };
+    if (preferred === "pollinations" || !preferred)
+      return { provider: "pollinations", key: null, model: "openai" };
+
+    // Preferred model couldn't be served — try any configured paid key
     if (ant) return { provider: "anthropic", key: ant, model: "claude-3-5-sonnet-20241022" };
+    if (gem) return { provider: "gemini", key: gem, model: "gemini-1.5-flash-latest" };
+    if (grq) return { provider: "groq", key: grq, model: "llama-3.1-70b-versatile" };
     if (oai) return { provider: "openai", key: oai, model: "gpt-4o-mini" };
-    return null;
+
+    // No keys at all — use free Pollinations
+    return { provider: "pollinations", key: null, model: "openai" };
   }
 
   global.BayanKeys = { get, set, has, clearAll, chatProvider, DEFAULTS, STORE };
