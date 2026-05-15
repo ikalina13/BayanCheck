@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Congress Roster — BayanCheck</title>
+  <meta name="description" content="Senate and House leadership roster with photos (Wikimedia Commons). Links to official Congress directory.">
+  <script src="js/theme-boot.js"></script>
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body data-page="roster">
+  <div id="site-header"></div>
+
+  <main class="container layout-main" style="padding-top:2rem;padding-bottom:3rem">
+    <p class="meta"><a href="index.html">Home</a> / Congress roster</p>
+    <h1 style="font-size:2rem;margin:.75rem 0 1rem">Philippine Congress roster</h1>
+    <p style="max-width:48rem;color:var(--muted);margin-bottom:1.5rem">
+      <strong>Senate:</strong> all 24 senators of the 20th Congress (2022 and 2025 election cohorts), with portraits from
+      <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>.
+      <strong>House:</strong> hundreds of district and party-list seats — browse the official chamber directory for the complete, up-to-date list. Leadership below includes verified Commons photos.
+    </p>
+
+    <div class="roster-toolbar">
+      <label for="roster-q" class="sr-only">Search roster</label>
+      <input type="search" id="roster-q" class="roster-search" placeholder="Search by name or party…" autocomplete="off">
+      <div class="roster-filters">
+        <button type="button" class="btn btn-ghost roster-filter active" data-filter="all">All 24</button>
+        <button type="button" class="btn btn-ghost roster-filter" data-filter="2025">2025 cohort</button>
+        <button type="button" class="btn btn-ghost roster-filter" data-filter="2022">2022 cohort</button>
+      </div>
+    </div>
+
+    <section style="margin-top:2rem">
+      <h2 class="section-title">Senate of the Philippines</h2>
+      <p id="roster-count" class="meta" style="margin-bottom:1rem"></p>
+      <div class="roster-grid" id="roster-senate"></div>
+    </section>
+
+    <section style="margin-top:3rem">
+      <h2 class="section-title">House of Representatives</h2>
+      <p style="color:var(--muted);max-width:48rem;margin-bottom:1rem">
+        The House includes district representatives and party-list seats. For every current member name, district, and contact data, use the official site (may load slowly).
+      </p>
+      <p style="margin-bottom:1.5rem">
+        <a href="https://www.congress.gov.ph/members/" class="btn btn-primary" target="_blank" rel="noopener">Open official member directory →</a>
+      </p>
+      <h3 style="font-size:1.1rem;margin-bottom:1rem">Leadership (sample)</h3>
+      <div class="roster-grid" id="roster-house"></div>
+    </section>
+
+    <section class="disclaimer" style="margin-top:2.5rem;max-width:48rem">
+      <strong>Source &amp; licensing</strong>
+      <p style="margin-top:.5rem;font-size:.875rem">
+        Senate list and election cohorts are aligned with Wikipedia’s
+        <a href="https://en.wikipedia.org/wiki/List_of_senators_elected_in_the_2025_Philippine_Senate_election" target="_blank" rel="noopener">2025</a> and
+        <a href="https://en.wikipedia.org/wiki/List_of_senators_elected_in_the_2022_Philippine_Senate_election" target="_blank" rel="noopener">2022</a>
+        senator election articles. Images are not hosted by BayanCheck; they resolve from Wikimedia Commons under each file’s license. Verify titles and membership on
+        <a href="https://www.congress.gov.ph/" target="_blank" rel="noopener">congress.gov.ph</a> and the
+        <a href="https://comelec.gov.ph/" target="_blank" rel="noopener">COMELEC</a>.
+      </p>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/roster-senate.js"></script>
+  <script src="js/roster-house.js"></script>
+  <script src="js/site.js"></script>
+</body>
+</html>

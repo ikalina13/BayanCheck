@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BayanCheck — Filipino News & Candidate Background Checker</title>
+  <meta name="description" content="Verified Philippine news and political candidate background checks for informed voters.">
+  <script src="js/theme-boot.js"></script>
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body data-page="home">
+  <div id="site-header"></div>
+
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <p class="tag">For Filipino Voters</p>
+        <h1>Verified News. Transparent Candidate Records.</h1>
+        <p style="margin-top:1rem;opacity:.85;font-size:1.1rem">BayanCheck combines Rappler-style news with source-linked candidate background checks — including controversies we never hide.</p>
+        <div style="margin-top:1.5rem;display:flex;flex-wrap:wrap;gap:.75rem">
+          <a href="candidates.html" class="btn btn-primary">Check a Candidate</a>
+          <a href="news.html" class="btn btn-ghost">Latest News</a>
+          <a href="roster.html" class="btn btn-ghost">Congress roster</a>
+        </div>
+      </div>
+      <div class="disclaimer">
+        <strong>Voter Education Disclaimer</strong>
+        <p style="margin-top:.5rem">Information is aggregated from public government sources and established news outlets. We do not endorse any candidate. Verify via <a href="https://comelec.gov.ph" target="_blank" rel="noopener">COMELEC</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <main class="container layout-main">
+    <section>
+      <h2 class="section-title">Breaking & Top Stories</h2>
+      <div class="grid-3" id="top-stories"></div>
+    </section>
+
+    <div class="layout-with-sidebar" style="display:grid;gap:2rem">
+      <section>
+        <h2 class="section-title">Featured Story</h2>
+        <div id="hero-news"></div>
+      </section>
+      <aside>
+        <div class="sidebar-box">
+          <h3>Trending Now</h3>
+          <div id="trending"></div>
+        </div>
+        <div class="sidebar-box" style="margin-top:1.5rem">
+          <h3>Featured Officials</h3>
+          <div id="featured-candidates" style="display:flex;flex-direction:column;gap:.75rem"></div>
+          <a href="candidates.html" style="display:block;text-align:center;margin-top:1rem;font-weight:600">Browse all →</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="js/roster-senate.js"></script>
+  <script src="js/roster-house.js"></script>
+  <script src="js/candidates-from-roster.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/site.js"></script>
+</body>
+</html>

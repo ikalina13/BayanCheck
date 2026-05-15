@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check a Candidate — BayanCheck</title>
+  <script src="js/theme-boot.js"></script>
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body data-page="candidates">
+  <div id="site-header"></div>
+  <main class="container" style="padding:2rem 1rem">
+    <h1>Check a Public Official</h1>
+    <p class="meta" style="margin:1rem 0">All 24 senators of the 20th Congress plus House leadership — real names and Wikimedia portraits. Case files and SALN details link to official sources (not fabricated records).</p>
+    <p class="meta" style="margin:0 0 1rem;font-size:.8rem;color:var(--muted)"><strong>Badges:</strong> <span class="severity clean" style="position:static;display:inline-block;padding:.1rem .4rem;font-size:.65rem">Clean</span> = no major item on our short public-issues list (verify anyway). <span class="severity pending" style="position:static;display:inline-block;padding:.1rem .4rem;font-size:.65rem">Public issues</span> = controversies or legal/ethics history widely reported. <span class="severity serious" style="position:static;display:inline-block;padding:.1rem .4rem;font-size:.65rem">Serious legal</span> = highest-tier international criminal-law scrutiny (e.g. ICC). Not legal advice.</p>
+    <form id="search-form" class="filters">
+      <input type="search" id="search-q" placeholder="Search name, party, position..." style="flex:1">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <div id="candidates-list" style="display:flex;flex-direction:column;gap:1rem;margin-top:1.5rem"></div>
+  </main>
+  <div id="site-footer"></div>
+  <script src="js/roster-senate.js"></script>
+  <script src="js/roster-house.js"></script>
+  <script src="js/candidates-from-roster.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/site.js"></script>
+</body>
+</html>
