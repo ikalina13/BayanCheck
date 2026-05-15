@@ -616,21 +616,31 @@
 
     try {
       await runWith(provider);
+      // If the primary model returned NOTHING (e.g. Gemini emitted only
+      // thought tokens and no content), transparently retry on Pollinations.
+      if (provider.provider !== "pollinations" && (!assistantMsg.content || !assistantMsg.content.trim())) {
+        try {
+          await runWith(global.BayanKeys.pollinationsFallback());
+          if (assistantMsg.content && assistantMsg.content.trim()) {
+            assistantMsg.content = "_(Switched to free Pollinations for this reply.)_\n\n" + assistantMsg.content;
+          }
+        } catch (e2) {}
+      }
       finishAssistant(assistantMsg);
     } catch (err) {
-      // If the embedded Gemini key is rate-limited or revoked, fall back
-      // to free Pollinations so the chat keeps working.
       const msg = err && err.message ? err.message : String(err);
-      const shouldFallback = provider.provider === "gemini" && /\b(429|403|quota|RESOURCE_EXHAUSTED|PERMISSION_DENIED|invalid)\b/i.test(msg);
+      const shouldFallback =
+        provider.provider !== "pollinations" &&
+        /\b(429|403|quota|RESOURCE_EXHAUSTED|PERMISSION_DENIED|invalid|API key|404)\b/i.test(msg);
       if (shouldFallback) {
         assistantMsg.content = "";
         try {
           await runWith(global.BayanKeys.pollinationsFallback());
-          assistantMsg.content = "_(Gemini was rate-limited — switched to free Pollinations for this reply.)_\n\n" + assistantMsg.content;
+          assistantMsg.content = "_(Primary AI was unavailable — switched to free Pollinations.)_\n\n" + assistantMsg.content;
           finishAssistant(assistantMsg);
           return;
         } catch (err2) {
-          finishAssistant(assistantMsg, "Both Gemini and Pollinations failed: " + (err2.message || err2));
+          finishAssistant(assistantMsg, "Both providers failed: " + (err2.message || err2));
           return;
         }
       }
@@ -707,7 +717,14 @@
     const body = {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents,
-      generationConfig: { maxOutputTokens: 1024, temperature: 0.4 },
+      generationConfig: {
+        maxOutputTokens: 2048,
+        temperature: 0.4,
+        // Disable chain-of-thought 'thinking' tokens. Without this, recent
+        // Gemini models (2.5+, 3.x) burn the entire token budget on
+        // invisible thought tokens and emit zero visible answer text.
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     };
     const resp = await fetch(url, {
       method: "POST",

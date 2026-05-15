@@ -15,6 +15,10 @@
     // limited or revoked, BayanBot falls back to free Pollinations
     // automatically (see BayanKeys.chatProvider in js/keys.js).
     defaultGeminiKey: "AIzaSyBMeLhjQ4NqNTqpXvEjf0G5_f1uO7Htyoc",
-    defaultGeminiModel: "gemini-flash-latest",
+    // gemini-2.5-flash is fast, free-tier-eligible, and lets us disable
+    // chain-of-thought tokens via thinkingConfig.thinkingBudget=0 (which we
+    // need — otherwise the model spends maxOutputTokens on internal "thoughts"
+    // and emits zero visible text).
+    defaultGeminiModel: "gemini-2.5-flash",
   };
 })(window);
