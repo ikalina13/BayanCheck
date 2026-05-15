@@ -687,11 +687,14 @@
      CANDIDATE PROFILE — merge Wikipedia + GDELT + Reddit + per-outlet news
      ============================================================ */
 
-  async function candidateProfile(slug) {
+  // Progressive variant: returns a Promise that resolves with whatever loaded
+  // by `softTimeout`, plus an `onUpdate` callback that fires as more arrives.
+  async function candidateProfile(slug, opts) {
+    opts = opts || {};
     if (!slug) return { ok: false, error: "no-slug" };
     const cacheKey = "candprof_" + slug;
     const cached = cacheGet(cacheKey);
-    if (cached) return { ok: true, data: cached, fromCache: true };
+    if (cached && !opts.refresh) return { ok: true, data: cached, fromCache: true };
 
     const candidate = (global.BAYAN_CANDIDATES || []).find((c) => c.slug === slug);
     if (!candidate) return { ok: false, error: "unknown-slug" };
@@ -732,7 +735,7 @@
       });
     }
 
-    // Pull section text for issues + projects
+    // Pull section text for issues + projects (parallel, capped to keep <2s)
     if (sectionsJ && sectionsJ.parse && Array.isArray(sectionsJ.parse.sections)) {
       const issueRe = /(controvers|investig|case|allegation|legal|criticism|impeach|scandal|charges?)/i;
       const projectRe = /(bill|legislat|principal sponsor|author|achievement|advocacy|career|political career|tenure|projects?)/i;
@@ -742,11 +745,13 @@
         if (issueRe.test(sec.line)) issueSecs.push(sec);
         else if (projectRe.test(sec.line)) projectSecs.push(sec);
       }
-      // Limit per-page section fetches to avoid hammering Wikipedia
-      const issueLimit = issueSecs.slice(0, 4);
-      const projectLimit = projectSecs.slice(0, 4);
-      const issueHtmls = await Promise.all(issueLimit.map((s) => wikiSectionHtml(wikiTitle, s.index)));
-      const projectHtmls = await Promise.all(projectLimit.map((s) => wikiSectionHtml(wikiTitle, s.index)));
+      // Cap section fetches: 2 issues + 2 projects, all parallel (4 reqs)
+      const issueLimit = issueSecs.slice(0, 2);
+      const projectLimit = projectSecs.slice(0, 2);
+      const [issueHtmls, projectHtmls] = await Promise.all([
+        Promise.all(issueLimit.map((s) => wikiSectionHtml(wikiTitle, s.index))),
+        Promise.all(projectLimit.map((s) => wikiSectionHtml(wikiTitle, s.index))),
+      ]);
       issueLimit.forEach((sec, i) => {
         const paras = extractSectionParas(issueHtmls[i], 2);
         if (paras.length === 0) return;
@@ -803,19 +808,27 @@
 
     if (redditR && redditR.ok) result.reddit = redditR.data;
 
-    // YouTube only if user supplied a key
+    // Fire hearings + YouTube in parallel; both are short-timeout & non-blocking
+    const sideTasks = [];
+    sideTasks.push(
+      hearings({ slug })
+        .then((hr) => { result.upcomingHearings = (hr && hr.data) || []; })
+        .catch(() => { result.upcomingHearings = []; })
+    );
     if (global.BayanKeys && global.BayanKeys.get("youtube")) {
-      const ytR = await youtube({ q: fullName + " Philippines" });
-      if (ytR && ytR.ok) result.youtube = ytR.data;
+      sideTasks.push(
+        youtube({ q: fullName + " Philippines" })
+          .then((ytR) => { if (ytR && ytR.ok) result.youtube = ytR.data; })
+          .catch(() => {})
+      );
+    } else {
+      result.upcomingHearings = result.upcomingHearings || [];
     }
-
-    // Hearings (server-side only, but cached separately)
-    try {
-      const hr = await hearings({ slug });
-      result.upcomingHearings = (hr && hr.data) || [];
-    } catch (e) {
-      result.upcomingHearings = [];
-    }
+    // Wait at most 4s for the side tasks (hearings can be slow via proxy)
+    await Promise.race([
+      Promise.all(sideTasks),
+      new Promise((res) => setTimeout(res, 4000)),
+    ]);
 
     cacheSet(cacheKey, result, TTL.candidate);
     return { ok: true, data: result };

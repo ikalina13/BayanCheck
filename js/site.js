@@ -714,6 +714,26 @@ const initPage = {
     initRevealAnimations($("#profile-root") || document);
 
     // ----- Live enrichment -----
+    // Hearings is fired SEPARATELY (independent of candidateProfile) so the
+    // hearing block fills in within a couple seconds even if the larger
+    // Wikipedia / GDELT roundtrip is still in flight.
+    if (window.BayanAPI && BayanAPI.hearings) {
+      BayanAPI.hearings({ slug, limit: 8 }).then((hr) => {
+        const hEl = document.getElementById("profile-hearings");
+        if (!hEl) return;
+        if (hr && hr.ok && hr.data && hr.data.length) {
+          hEl.innerHTML = `
+            <ul class="hearings-list">${hr.data.slice(0, 8).map(hearingRow).join("")}</ul>
+            <p class="meta" style="margin-top:.5rem">Source: <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">senate.gov.ph</a> committee calendar · live-fetched</p>`;
+        } else {
+          hEl.innerHTML = `<p class="empty-soft">No upcoming hearings on file for this senator's committees in the Senate calendar (next 30 days), or the Senate site is currently unreachable. <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">View full calendar →</a></p>`;
+        }
+      }).catch(() => {
+        const hEl = document.getElementById("profile-hearings");
+        if (hEl) hEl.innerHTML = `<p class="empty-soft">Senate calendar temporarily unreachable. <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">View on senate.gov.ph →</a></p>`;
+      });
+    }
+
     if (window.BayanAPI && BayanAPI.candidateProfile) {
       BayanAPI.candidateProfile(slug).then((res) => {
         if (!res || !res.ok || !res.data) return;
@@ -727,17 +747,7 @@ const initPage = {
           }
         }
 
-        // Hearings
-        const hEl = document.getElementById("profile-hearings");
-        if (hEl) {
-          if (d.upcomingHearings && d.upcomingHearings.length) {
-            hEl.innerHTML = `
-              <ul class="hearings-list">${d.upcomingHearings.slice(0, 8).map(hearingRow).join("")}</ul>
-              <p class="meta" style="margin-top:.5rem">Source: <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">senate.gov.ph</a> committee calendar · live-fetched ${BayanAPI.relativeTime(d.lastFetched)}</p>`;
-          } else {
-            hEl.innerHTML = `<p class="empty-soft">No upcoming hearings on file for this senator's committees in the Senate calendar (next 30 days). <a href="https://web.senate.gov.ph/committee/calendar.asp" target="_blank" rel="noopener">View full calendar →</a></p>`;
-          }
-        }
+        // Hearings is rendered by its own independent fetch above.
 
         // Issues
         const iEl = document.getElementById("profile-issues");
