@@ -162,4 +162,9 @@ const BAYAN_NEWS_FALLBACK = [
  * but everything new should use the live BayanAPI.news() feed. */
 const BAYAN_NEWS = BAYAN_NEWS_FALLBACK;
 
+// Force-attach to window so api.js can find these (top-level `const` is
+// not auto-attached to the global object in browsers).
+window.BAYAN_NEWS = BAYAN_NEWS;
+window.BAYAN_NEWS_FALLBACK = BAYAN_NEWS_FALLBACK;
+
 /* BAYAN_CANDIDATES is built in candidates-from-roster.js (24 senators + House leadership). */

@@ -24,3 +24,4 @@ const BAYAN_HOUSE_LEADERSHIP = [
     photoFileAlt: ["Rep. Ferdinand Martin Romualdez (20th Congress).jpg"],
   },
 ];
+window.BAYAN_HOUSE_LEADERSHIP = BAYAN_HOUSE_LEADERSHIP;

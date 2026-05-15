@@ -248,3 +248,4 @@ const BAYAN_SENATE_ROSTER = [
     photoFile: "Senator Jinggoy Estrada (Comission on Appointments portrait).png",
   },
 ];
+window.BAYAN_SENATE_ROSTER = BAYAN_SENATE_ROSTER;

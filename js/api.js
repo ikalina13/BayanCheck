@@ -129,11 +129,10 @@
 
   function rss2jsonUrl(feedUrl) {
     const key = global.BayanKeys && global.BayanKeys.get("rss2json");
-    let u =
-      "https://api.rss2json.com/v1/api.json?rss_url=" +
-      encodeURIComponent(feedUrl) +
-      "&count=15";
-    if (key) u += "&api_key=" + encodeURIComponent(key);
+    // The free rss2json tier rejects `count=` without a key (HTTP 422).
+    // Default response is ~10 items which is enough for our aggregation.
+    let u = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(feedUrl);
+    if (key) u += "&api_key=" + encodeURIComponent(key) + "&count=20";
     return u;
   }
 
@@ -233,9 +232,10 @@
     const q =
       opts.query ||
       "(senate OR congress OR comelec OR malacanang OR \"philippine politics\")";
+    // GDELT uses FIPS 10-4 country codes — Philippines is "RP", NOT ISO "PH".
     const url =
       "https://api.gdeltproject.org/api/v2/doc/doc?query=" +
-      encodeURIComponent(q + " sourcecountry:PH") +
+      encodeURIComponent(q + " sourcecountry:RP") +
       "&mode=ArtList&format=json&maxrecords=50&sort=DateDesc";
     try {
       const r = await fetch(url, { credentials: "omit" });
@@ -367,19 +367,41 @@
      ============================================================ */
 
   const SENATE_CAL_URL = "https://web.senate.gov.ph/committee/calendar.asp";
+  const SENATE_HOME_URL = "https://web.senate.gov.ph/";
+  const SENATE_PR_URL = "https://web.senate.gov.ph/press_release/";
 
   async function hearings(opts) {
     opts = opts || {};
     const cacheKey = "hearings_all";
     let all = cacheGet(cacheKey);
     if (!all || opts.refresh) {
-      try {
-        const html = await global.BayanProxy.fetchViaProxy(SENATE_CAL_URL, { timeout: 10000 });
-        all = parseSenateCalendar(html);
-        if (all.length > 0) cacheSet(cacheKey, all, TTL.hearings);
-      } catch (e) {
+      const targets = [SENATE_CAL_URL, SENATE_HOME_URL, SENATE_PR_URL];
+      let html = "";
+      for (const t of targets) {
+        try {
+          html = await global.BayanProxy.fetchViaProxy(t, { timeout: 12000 });
+          if (html && html.length > 500 && !/Attention Required|cf-error/i.test(html)) {
+            const parsed = parseSenateCalendar(html);
+            if (parsed.length > 0) {
+              all = parsed;
+              cacheSet(cacheKey, all, TTL.hearings);
+              break;
+            }
+          }
+        } catch (e) {
+          // try next target
+        }
+      }
+      if (!all || !all.length) {
         all = cacheGet(cacheKey) || [];
-        if (!all.length) return { ok: false, error: "senate-unreachable", data: [] };
+        if (!all.length) {
+          return {
+            ok: false,
+            error: "senate-unreachable",
+            data: [],
+            sourceUrl: SENATE_CAL_URL,
+          };
+        }
         return { ok: true, data: filterHearings(all, opts), degraded: true, fromCache: true };
       }
     }
@@ -553,15 +575,21 @@
       const cached = cacheGet(cacheKey);
       if (cached) return { ok: true, data: cached, fromCache: true };
     }
-    const url =
-      "https://www.reddit.com/r/Philippines/search.json?q=" +
-      encodeURIComponent('"' + q + '"') +
-      "&restrict_sr=on&sort=new&t=month&limit=10";
-    try {
-      const r = await fetch(url, { credentials: "omit" });
-      if (!r.ok) throw new Error("reddit HTTP " + r.status);
-      const j = await r.json();
-      const posts = ((j.data && j.data.children) || []).map((c) => c.data).map((p) => ({
+    // Reddit's old.reddit.com endpoint still serves real JSON for .json URLs
+    // and is friendlier to non-app traffic. We try direct first (works from
+    // most consumer ISPs), then fall back to old.reddit, then to a CORS proxy.
+    const queryStr =
+      "?q=" + encodeURIComponent('"' + q + '"') +
+      "&restrict_sr=on&sort=new&t=month&limit=10&raw_json=1";
+    const direct = "https://www.reddit.com/r/Philippines/search.json" + queryStr;
+    const oldUrl = "https://old.reddit.com/r/Philippines/search.json" + queryStr;
+
+    async function tryParse(text) {
+      // Some proxies return text; tolerate both
+      let j;
+      try { j = JSON.parse(text); } catch (e) { return null; }
+      if (!j || !j.data || !Array.isArray(j.data.children)) return null;
+      return j.data.children.map((c) => c.data).map((p) => ({
         title: p.title,
         url: "https://www.reddit.com" + p.permalink,
         score: p.score,
@@ -570,19 +598,42 @@
         publishedAt: new Date((p.created_utc || 0) * 1000).toISOString(),
         snippet: (p.selftext || "").slice(0, 240),
       }));
-      const filtered = posts.filter((p) =>
-        global.BayanFilter
-          ? global.BayanFilter.isPhPoliticsRelevant(
-              { title: p.title, summary: p.snippet, sourceUrl: p.url },
-              { strictness: "loose" }
-            )
-          : true
-      );
-      cacheSet(cacheKey, filtered, TTL.reddit);
-      return { ok: true, data: filtered };
-    } catch (e) {
-      return { ok: false, error: String(e), data: [] };
     }
+
+    async function attempt(url, viaProxy) {
+      try {
+        let text;
+        if (viaProxy) {
+          text = await global.BayanProxy.fetchViaProxy(url, { timeout: 9000 });
+        } else {
+          const r = await fetch(url, { credentials: "omit" });
+          if (!r.ok) return null;
+          text = await r.text();
+        }
+        return tryParse(text);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    let posts =
+      (await attempt(direct, false)) ||
+      (await attempt(oldUrl, false)) ||
+      (await attempt(direct, true)) ||
+      (await attempt(oldUrl, true));
+
+    if (!posts) return { ok: false, error: "reddit-unreachable", data: [] };
+
+    const filtered = posts.filter((p) =>
+      global.BayanFilter
+        ? global.BayanFilter.isPhPoliticsRelevant(
+            { title: p.title, summary: p.snippet, sourceUrl: p.url },
+            { strictness: "loose" }
+          )
+        : true
+    );
+    cacheSet(cacheKey, filtered, TTL.reddit);
+    return { ok: true, data: filtered };
   }
 
   async function youtube(opts) {
@@ -668,9 +719,10 @@
       sources: [],
     };
 
-    if (summaryJ && !summaryJ.title === undefined) {
+    if (summaryJ && summaryJ.title && summaryJ.type !== "disambiguation") {
       result.biography.summary = summaryJ.extract || "";
       if (summaryJ.thumbnail) result.biography.thumbnail = summaryJ.thumbnail.source;
+      if (summaryJ.description) result.biography.description = summaryJ.description;
       result.sources.push({
         label: "Wikipedia — " + (summaryJ.titles?.normalized || wikiTitle.replace(/_/g, " ")),
         url:

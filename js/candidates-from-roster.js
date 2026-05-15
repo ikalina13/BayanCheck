@@ -211,3 +211,7 @@ function buildBayanCandidatesFromRoster() {
 }
 
 const BAYAN_CANDIDATES = buildBayanCandidatesFromRoster();
+// Browsers do NOT attach top-level `const` declarations to window. Force-attach
+// so api.js (which references `window.BAYAN_CANDIDATES` via its `global` param)
+// can find the roster.
+window.BAYAN_CANDIDATES = BAYAN_CANDIDATES;

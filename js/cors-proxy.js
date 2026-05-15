@@ -8,15 +8,23 @@
 
   const PROXIES = [
     {
+      name: "corsproxy.io",
+      // returns the raw response body directly (text/JSON pass-through);
+      // requires the browser's Origin header (auto-sent in normal fetches)
+      build: (url) => "https://corsproxy.io/?" + encodeURIComponent(url),
+      extract: (resp) => resp.text(),
+    },
+    {
       name: "allorigins",
       // returns JSON with .contents (the raw response body)
       build: (url) => "https://api.allorigins.win/get?url=" + encodeURIComponent(url),
-      extract: (resp) => resp.json().then((j) => j.contents),
+      extract: (resp) => resp.json().then((j) => (j ? j.contents : null)),
     },
     {
-      name: "corsproxy.io",
-      // returns the raw response body directly (text/JSON pass-through)
-      build: (url) => "https://corsproxy.io/?" + encodeURIComponent(url),
+      name: "codetabs",
+      // returns the raw body; redirects /v1/proxy → /v1/proxy/ but redirect
+      // is followed automatically by fetch
+      build: (url) => "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(url),
       extract: (resp) => resp.text(),
     },
   ];
